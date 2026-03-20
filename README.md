@@ -439,6 +439,8 @@ The Initia evm-1 testnet uses Celatone as its block explorer. Automated CLI veri
 | AgentVault | `flattened/AgentVault.flat.sol` |
 | AgentExecutor | `flattened/AgentExecutor.flat.sol` |
 | ProfitSplitter | `flattened/ProfitSplitter.flat.sol` |
+| MockERC20 (INIT & USDC) | `flattened/MockERC20.flat.sol` |
+| MockInitiaDEX | `flattened/MockInitiaDEX.flat.sol` |
 
 **Constructor arguments (ABI-encoded):**
 

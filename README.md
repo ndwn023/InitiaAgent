@@ -8,6 +8,23 @@ A non-custodial AI trading agent marketplace built on Initia EVM (evm-1 MiniEVM 
 
 ---
 
+## Deployed Contracts (evm-1 Testnet)
+
+| Contract | Address | Explorer |
+|---|---|---|
+| AgentRegistry | `0xBF1Bf9E5113fdF25b2104c9494F518C46caC3C5D` | [View](https://scan.testnet.initia.xyz/evm-1/accounts/0xBF1Bf9E5113fdF25b2104c9494F518C46caC3C5D) |
+| AgentExecutor | `0x0777CA550E0dFB9c64deb88A871a3ad867c2e014` | [View](https://scan.testnet.initia.xyz/evm-1/accounts/0x0777CA550E0dFB9c64deb88A871a3ad867c2e014) |
+| ProfitSplitter | `0x9D925037CA3e28d3943cea6aA7cBF36b4f681D9F` | [View](https://scan.testnet.initia.xyz/evm-1/accounts/0x9D925037CA3e28d3943cea6aA7cBF36b4f681D9F) |
+| AgentVault (Agent #1) | `0xe3DCC86978d57d0753d60bca3687dbbbB8f104D6` | [View](https://scan.testnet.initia.xyz/evm-1/accounts/0xe3DCC86978d57d0753d60bca3687dbbbB8f104D6) |
+| MockERC20 (INIT) | `0x2A3888Bd6865D2C360D11F284FE773379fb98E30` | [View](https://scan.testnet.initia.xyz/evm-1/accounts/0x2A3888Bd6865D2C360D11F284FE773379fb98E30) |
+| MockERC20 (USDC) | `0x44cB6c715b9Aba693f87e1660B1728b7aD083620` | [View](https://scan.testnet.initia.xyz/evm-1/accounts/0x44cB6c715b9Aba693f87e1660B1728b7aD083620) |
+| MockInitiaDEX | `0xd1e1f06DD977Fb0faEb29E7322Fd94064aBad3F9` | [View](https://scan.testnet.initia.xyz/evm-1/accounts/0xd1e1f06DD977Fb0faEb29E7322Fd94064aBad3F9) |
+
+**Deployer:** `0xf86205FD1017dEEBfEB9Fe62e470B7fAfFF74DAE`
+**Block Explorer:** https://scan.testnet.initia.xyz/evm-1
+
+---
+
 ## Table of Contents
 
 1. [Problem Statement](#1-problem-statement)
@@ -399,26 +416,51 @@ Expected output:
 
 ## 11. Contract Verification
 
+The Initia evm-1 testnet uses Celatone as its block explorer. Automated CLI verification via Sourcify or Etherscan is not supported for this chain ID (`2124225178762456`) as it is not yet registered in those services.
+
+**Manual verification via Initia Scan UI:**
+
+1. Open the contract page on the explorer, for example:
+   `https://scan.testnet.initia.xyz/evm-1/accounts/0xBF1Bf9E5113fdF25b2104c9494F518C46caC3C5D`
+
+2. Use the flattened source files in the `flattened/` directory of this repository. Each file contains the full contract source with all imports resolved.
+
+3. If the explorer provides a "Verify Contract" button, submit:
+   - Compiler: `solc 0.8.24`
+   - Optimization: enabled, 200 runs
+   - IR compilation: `via-ir: true`
+   - Source: contents of the corresponding `.flat.sol` file
+
+**Flattened source files (for manual submission):**
+
+| Contract | Flattened File |
+|---|---|
+| AgentRegistry | `flattened/AgentRegistry.flat.sol` |
+| AgentVault | `flattened/AgentVault.flat.sol` |
+| AgentExecutor | `flattened/AgentExecutor.flat.sol` |
+| ProfitSplitter | `flattened/ProfitSplitter.flat.sol` |
+
+**Constructor arguments (ABI-encoded):**
+
 ```bash
-source .env
+# AgentRegistry
+cast abi-encode "constructor(address)" 0xf86205FD1017dEEBfEB9Fe62e470B7fAfFF74DAE
 
-forge verify-contract $REGISTRY_ADDRESS \
-  src/AgentRegistry.sol:AgentRegistry \
-  --verifier-url https://scan.testnet.initia.xyz/api/evm-1 \
-  --chain-id 2124225178762456 \
-  --etherscan-api-key empty \
-  --constructor-args $(cast abi-encode "constructor(address)" $PROTOCOL_TREASURY)
+# AgentExecutor
+cast abi-encode "constructor(address,address,address)" \
+  0xBF1Bf9E5113fdF25b2104c9494F518C46caC3C5D \
+  0xd1e1f06DD977Fb0faEb29E7322Fd94064aBad3F9 \
+  0xf86205FD1017dEEBfEB9Fe62e470B7fAfFF74DAE
 
-forge verify-contract $EXECUTOR_ADDRESS \
-  src/AgentExecutor.sol:AgentExecutor \
-  --verifier-url https://scan.testnet.initia.xyz/api/evm-1 \
-  --chain-id 2124225178762456 \
-  --etherscan-api-key empty \
-  --constructor-args $(cast abi-encode "constructor(address,address,address)" \
-    $REGISTRY_ADDRESS $DEX_ADDRESS $PROTOCOL_TREASURY)
+# ProfitSplitter
+cast abi-encode "constructor(address,address,address,uint256,uint256,uint256)" \
+  0xBF1Bf9E5113fdF25b2104c9494F518C46caC3C5D \
+  0x2A3888Bd6865D2C360D11F284FE773379fb98E30 \
+  0xf86205FD1017dEEBfEB9Fe62e470B7fAfFF74DAE \
+  200 2000 604800
 ```
 
-View contracts on the explorer: `https://scan.testnet.initia.xyz/evm-1`
+View all contracts on the explorer: `https://scan.testnet.initia.xyz/evm-1`
 
 ---
 

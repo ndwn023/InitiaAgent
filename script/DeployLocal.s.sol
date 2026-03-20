@@ -102,7 +102,7 @@ contract DeployLocal is Script {
             '","vault":"', vm.toString(address(vault)),
             '","agentId":"1"}'
         ));
-        vm.writeJson(json, "broadcast/local-addresses.json");
+        vm.writeFile("broadcast/local-addresses.json", json);
     }
 }
 

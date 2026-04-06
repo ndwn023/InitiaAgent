@@ -1,12 +1,12 @@
 {
   "project_name": "InitiaAgent",
-  "repo_url": "https://github.com/PLACEHOLDER/initiagent",
-  "commit_sha": "PLACEHOLDER_40_CHAR_SHA",
-  "rollup_chain_id": "initiagent-1",
-  "deployed_address": "PLACEHOLDER_CONTRACT_ADDRESS",
+  "repo_url": "https://github.com/initiatiHacksUKDW/initiateHacksUKDW",
+  "commit_sha": "d7e7d64d98ba5b2bec9a6a77c7ea2f6d0c40e325",
+  "rollup_chain_id": "evm-1",
+  "deployed_address": "0xBF1Bf9E5113fdF25b2104c9494F518C46caC3C5D",
   "vm": "evm",
-  "native_feature": "interwoven-bridge",
-  "core_logic_path": "src/AgentVault.sol",
-  "native_feature_frontend_path": "frontend/src/components/Bridge.jsx",
+  "native_feature": "auto-signing",
+  "core_logic_path": "SmartContract/src/AgentVault.sol",
+  "native_feature_frontend_path": "FrontEnd/src/components/AutoSigningNavbar.tsx",
   "demo_video_url": "https://youtu.be/PLACEHOLDER"
 }

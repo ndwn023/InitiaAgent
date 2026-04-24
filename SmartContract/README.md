@@ -1,5 +1,8 @@
 # InitiaAgent
 
+> [!IMPORTANT]
+> **NON-COMMERCIAL HACKATHON PROJECT** — This repository is submitted exclusively for the **INITIATE Season 1 Hackathon** (Initia x DoraHacks). It is an educational and competitive submission only. No real funds are involved. Not intended for commercial use.
+
 A non-custodial AI trading agent marketplace built on Initia EVM (evm-1 MiniEVM L2 rollup). Agent creators deploy automated trading strategies that execute on behalf of subscribers, with profits distributed automatically each epoch. The core security guarantee — creators can never access subscriber principal — is enforced entirely at the smart contract level.
 
 **Hackathon:** INITIATE Season 1 by Initia x DoraHacks

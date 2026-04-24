@@ -1,5 +1,8 @@
 # InitiaAgent
 
+> [!IMPORTANT]
+> **NON-COMMERCIAL HACKATHON PROJECT** — This repository is submitted exclusively for the **INITIATE Season 1 Hackathon** (Initia x DoraHacks). It is an educational and competitive submission only. No real funds are involved. Not intended for commercial use.
+
 > Non-custodial AI trading agent marketplace on Initia EVM
 
 [![Hackathon](https://img.shields.io/badge/Hackathon-INITIATE_S1-4a9eed)](https://dorahacks.io/hackathon/initia)

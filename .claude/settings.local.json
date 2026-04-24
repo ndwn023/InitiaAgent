@@ -9,8 +9,8 @@
       "WebFetch(domain:api.github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(xargs ls:*)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(wc:*)"
     ]
   }
 }
-

@@ -4,6 +4,9 @@
 
 | Resource | URL |
 |---|---|
+| Live App | [initiaagent.vercel.app](https://initiaagent.vercel.app/) |
+| Backend API | [initiaagent-backend-railway.up.railway.app](https://initiaagent-backend-railway.up.railway.app) |
+| Demo Video | [YouTube](https://www.youtube.com/watch?v=g0jYPD1gF14) |
 | Hackathon | [INITIATE Season 1 (DoraHacks)](https://dorahacks.io/hackathon/initia) |
 | Block Explorer | [Initia Scan (evm-1)](https://scan.testnet.initia.xyz/evm-1) |
 

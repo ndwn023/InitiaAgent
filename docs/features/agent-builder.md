@@ -2,6 +2,8 @@
 
 The Agent Builder is a no-code interface for creating and deploying custom trading strategies.
 
+![Builder — Strategy Selection](../.gitbook/assets/builder-step1.png)
+
 ## Strategy Types
 
 | Strategy | Description |
@@ -33,6 +35,8 @@ The Agent Builder is a no-code interface for creating and deploying custom tradi
 
 ## AI Simulation
 
+![Builder — AI Analysis Result](../.gitbook/assets/builder-analysis.png)
+
 Before deploying, creators can run an **AI-powered simulation** of their strategy:
 
 1. Click "Simulate with AI"
@@ -46,6 +50,8 @@ Before deploying, creators can run an **AI-powered simulation** of their strateg
 5. A performance chart visualizes projected outcomes
 
 ## Deployment Workflow
+
+![Builder — Risk Controls & Deploy](../.gitbook/assets/builder-step2.png)
 
 Deploying an agent is a multi-step process:
 

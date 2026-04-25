@@ -2,6 +2,8 @@
 
 The marketplace is the main entry point for subscribers looking to invest in automated trading strategies.
 
+![Agent Marketplace](../.gitbook/assets/qs-marketplace.png)
+
 ## What It Does
 
 The marketplace displays all registered agents, allowing subscribers to:
@@ -15,6 +17,8 @@ The marketplace displays all registered agents, allowing subscribers to:
 ### Prerequisites
 - Wallet connected via InterwovenKit
 - INIT tokens on evm-1 testnet (bridge from L1 or use faucet)
+
+![Subscribe Dialog](../.gitbook/assets/qs-subscribe.png)
 
 ### Flow
 

@@ -11,6 +11,8 @@
 
 ## What is InitiaAgent?
 
+![Landing Page](.gitbook/assets/landing-hero.png)
+
 InitiaAgent is a four-contract system where **agent creators** publish automated trading strategies and **subscribers** deposit funds into non-custodial vaults. An off-chain **AI runner** executes trades within strict on-chain bounds, and profits are distributed automatically each epoch.
 
 The core security guarantee: **creators can never access subscriber principal** — enforced entirely at the smart contract level.
@@ -27,6 +29,8 @@ The core security guarantee: **creators can never access subscriber principal** 
 ---
 
 ## How It Works
+
+![Deploy in 3 Steps](.gitbook/assets/landing-steps.png)
 
 ```mermaid
 sequenceDiagram
@@ -52,6 +56,10 @@ sequenceDiagram
 ```
 
 ---
+
+## Core Features
+
+![Core Features](.gitbook/assets/landing-features.png)
 
 ## Explore the Docs
 
@@ -87,6 +95,9 @@ sequenceDiagram
 
 ## Quick Links
 
+- **Live App:** [initiaagent.vercel.app](https://initiaagent.vercel.app/)
+- **Backend API:** [initiaagent-backend-railway.up.railway.app](https://initiaagent-backend-railway.up.railway.app)
+- **Demo Video:** [Watch on YouTube](https://www.youtube.com/watch?v=g0jYPD1gF14)
 - **Block Explorer:** [Initia Scan (evm-1)](https://scan.testnet.initia.xyz/evm-1)
 - **Hackathon:** [INITIATE Season 1](https://dorahacks.io/hackathon/initia) by Initia x DoraHacks
 - **Chain ID:** `2124225178762456`

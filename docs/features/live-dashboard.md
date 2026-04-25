@@ -2,6 +2,8 @@
 
 The dashboard is the command center for subscribers and creators to monitor their portfolio, agents, and AI-driven trading activity.
 
+![Live Dashboard](../.gitbook/assets/qs-dashboard.png)
+
 ## Portfolio Overview
 
 The top section displays real-time portfolio metrics:

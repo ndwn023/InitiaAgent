@@ -1,6 +1,6 @@
 # Quickstart
 
-Get started with InitiaAgent in 5 minutes.
+Get started with InitiaAgent in 5 minutes. The app is live at [initiaagent.vercel.app](https://initiaagent.vercel.app/).
 
 ## Prerequisites
 
@@ -16,13 +16,13 @@ Get started with InitiaAgent in 5 minutes.
 
 ## Step 1: Connect Wallet
 
-<!-- TODO: Add screenshot of landing page with connect button -->
+![Connect Wallet](../.gitbook/assets/qs-connect.png)
 
-Open the app and click **Connect Wallet**. Select your wallet provider and approve the connection. The app will automatically prompt you to switch to Initia evm-1 if needed.
+Open the [live app](https://initiaagent.vercel.app/) and click **Connect Wallet**. Select your wallet provider and approve the connection. The app will automatically prompt you to switch to Initia evm-1 if needed.
 
 ## Step 2: Browse the Marketplace
 
-<!-- TODO: Add screenshot of marketplace page -->
+![Marketplace](../.gitbook/assets/qs-marketplace.png)
 
 Navigate to the **Marketplace** to see available trading agents. Each agent card shows:
 - Strategy type (DCA, LP Rebalancing, Yield Optimizer, VIP Maximizer)
@@ -31,7 +31,7 @@ Navigate to the **Marketplace** to see available trading agents. Each agent card
 
 ## Step 3: Subscribe to an Agent
 
-<!-- TODO: Add screenshot of subscribe dialog -->
+![Subscribe Dialog](../.gitbook/assets/qs-subscribe.png)
 
 1. Click on an agent to open the subscribe dialog
 2. Enter the amount of INIT you want to deposit
@@ -40,7 +40,7 @@ Navigate to the **Marketplace** to see available trading agents. Each agent card
 
 ## Step 4: Monitor on Dashboard
 
-<!-- TODO: Add screenshot of dashboard -->
+![Dashboard](../.gitbook/assets/qs-dashboard.png)
 
 Your subscribed agents appear on the **Dashboard** with:
 - Portfolio balance and unrealized profit
@@ -50,7 +50,7 @@ Your subscribed agents appear on the **Dashboard** with:
 
 ## Step 5: Withdraw Anytime
 
-<!-- TODO: Add screenshot of withdraw button -->
+![Withdraw](../.gitbook/assets/qs-withdraw.png)
 
 Click **Withdraw** on any agent card in the Dashboard. Your shares are redeemed for the underlying assets including any accumulated profit. There is no lock-up period — you can exit at any time, even if the vault is paused.
 

@@ -67,9 +67,9 @@ Shares represent a proportional claim on the vault's total assets. As profits ac
 1. Anyone calls `splitter.distributeProfit(agentId)` after the epoch duration has elapsed
 2. Splitter snapshots the vault's current value
 3. If value increased since last snapshot:
-   - **2%** of profit goes to protocol treasury
-   - **20%** of net profit goes to the creator
-   - **78%** remains in the vault (increases share value for subscribers)
+   - **2%** of gross profit goes to protocol treasury
+   - **20% of net profit** (after protocol fee) goes to the creator — ~19.6% of gross
+   - **Remainder (~78.4%)** stays in the vault and increases share value for subscribers
 4. Snapshot and timestamp are updated
 
 ### 5. Subscriber Withdraws

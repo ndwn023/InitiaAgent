@@ -1,0 +1,97 @@
+<svg width="400" height="80" viewBox="0 0 400 80" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bgGlow" cx="40" cy="40" r="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#6622AA" stop-opacity="0.42"/>
+      <stop offset="55%"  stop-color="#3A1070" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#150430" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cGrad" cx="40" cy="40" r="20" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#ffffff"  stop-opacity="1"/>
+      <stop offset="18%"  stop-color="#EE88FF"  stop-opacity="0.95"/>
+      <stop offset="48%"  stop-color="#8833BB"  stop-opacity="0.85"/>
+      <stop offset="78%"  stop-color="#4A1188"  stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#2A0855"  stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="hFill" cx="40" cy="40" r="36" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#4A1888" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#1A0440" stop-opacity="0.03"/>
+    </radialGradient>
+    <linearGradient id="tGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#FA93FA"/>
+      <stop offset="55%"  stop-color="#C967E8"/>
+      <stop offset="100%" stop-color="#983AD6"/>
+    </linearGradient>
+    <filter id="dGlow" x="-250%" y="-250%" width="600%" height="600%">
+      <feGaussianBlur stdDeviation="1.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="cBloom" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="4.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Icon center(40,40), outer r=34 -->
+  <circle cx="40" cy="40" r="40" fill="url(#bgGlow)"/>
+
+  <!-- Outer flat-top hex r=34:
+       0°(74,40)  60°(57,69.4)  120°(23,69.4)
+       180°(6,40) 240°(23,10.6) 300°(57,10.6) -->
+  <polygon points="74,40 57,69.4 23,69.4 6,40 23,10.6 57,10.6"
+    fill="url(#hFill)" stroke="#9035C0" stroke-width="1.2" stroke-opacity="0.85"/>
+
+  <!-- Inner pointy-top hex r=19:
+       270°(40,21)  330°(56.5,30.5)  30°(56.5,49.5)
+       90°(40,59)   150°(23.5,49.5)  210°(23.5,30.5) -->
+  <!-- Connecting lines -->
+  <line x1="57"  y1="10.6" x2="40"  y2="21"   stroke="#9035C0" stroke-width="0.75" stroke-opacity="0.58"/>
+  <line x1="23"  y1="10.6" x2="40"  y2="21"   stroke="#9035C0" stroke-width="0.75" stroke-opacity="0.58"/>
+  <line x1="57"  y1="69.4" x2="56.5" y2="49.5" stroke="#9035C0" stroke-width="0.75" stroke-opacity="0.58"/>
+  <line x1="23"  y1="69.4" x2="23.5" y2="49.5" stroke="#9035C0" stroke-width="0.75" stroke-opacity="0.58"/>
+  <line x1="74"  y1="40"  x2="56.5" y2="30.5" stroke="#9035C0" stroke-width="0.75" stroke-opacity="0.58"/>
+  <line x1="6"   y1="40"  x2="23.5" y2="30.5" stroke="#9035C0" stroke-width="0.75" stroke-opacity="0.58"/>
+
+  <!-- Inner hex -->
+  <polygon points="40,21 56.5,30.5 56.5,49.5 40,59 23.5,49.5 23.5,30.5"
+    fill="none" stroke="#9035C0" stroke-width="0.9" stroke-opacity="0.72"/>
+
+  <!-- Y-lines -->
+  <line x1="40"   y1="21"   x2="40" y2="40" stroke="#9035C0" stroke-width="0.8" stroke-opacity="0.7"/>
+  <line x1="56.5" y1="49.5" x2="40" y2="40" stroke="#9035C0" stroke-width="0.8" stroke-opacity="0.7"/>
+  <line x1="23.5" y1="49.5" x2="40" y2="40" stroke="#9035C0" stroke-width="0.8" stroke-opacity="0.7"/>
+
+  <!-- Outer vertex dots -->
+  <circle cx="74"  cy="40"   r="3.2" fill="#BB55DD" filter="url(#dGlow)" opacity="0.9"/>
+  <circle cx="57"  cy="69.4" r="3.2" fill="#BB55DD" filter="url(#dGlow)" opacity="0.9"/>
+  <circle cx="23"  cy="69.4" r="3.2" fill="#BB55DD" filter="url(#dGlow)" opacity="0.9"/>
+  <circle cx="6"   cy="40"   r="3.2" fill="#BB55DD" filter="url(#dGlow)" opacity="0.9"/>
+  <circle cx="23"  cy="10.6" r="3.2" fill="#BB55DD" filter="url(#dGlow)" opacity="0.9"/>
+  <circle cx="57"  cy="10.6" r="3.2" fill="#BB55DD" filter="url(#dGlow)" opacity="0.9"/>
+  <circle cx="74"  cy="40"   r="1.7" fill="#CC77EE"/>
+  <circle cx="57"  cy="69.4" r="1.7" fill="#CC77EE"/>
+  <circle cx="23"  cy="69.4" r="1.7" fill="#CC77EE"/>
+  <circle cx="6"   cy="40"   r="1.7" fill="#CC77EE"/>
+  <circle cx="23"  cy="10.6" r="1.7" fill="#CC77EE"/>
+  <circle cx="57"  cy="10.6" r="1.7" fill="#CC77EE"/>
+
+  <!-- Inner Y-junction dots -->
+  <circle cx="40"   cy="21"   r="1.4" fill="#AA44CC" filter="url(#dGlow)" opacity="0.75"/>
+  <circle cx="56.5" cy="49.5" r="1.4" fill="#AA44CC" filter="url(#dGlow)" opacity="0.75"/>
+  <circle cx="23.5" cy="49.5" r="1.4" fill="#AA44CC" filter="url(#dGlow)" opacity="0.75"/>
+
+  <!-- Bullseye -->
+  <circle cx="40" cy="40" r="16" fill="url(#cGrad)" opacity="0.65" filter="url(#cBloom)"/>
+  <circle cx="40" cy="40" r="10.5" fill="none" stroke="#9035C0" stroke-width="0.7" stroke-opacity="0.48"/>
+  <circle cx="40" cy="40" r="8.5" fill="#5E1A99" fill-opacity="0.82"/>
+  <circle cx="40" cy="40" r="5.5" fill="none" stroke="#BB55DD" stroke-width="0.8" stroke-opacity="0.82"/>
+  <circle cx="40" cy="40" r="3.5" fill="#8833BB" fill-opacity="0.9"/>
+  <circle cx="40" cy="40" r="2.2" fill="#CC66EE" filter="url(#dGlow)" opacity="0.95"/>
+  <circle cx="40" cy="40" r="1.2" fill="white"/>
+
+  <!-- Text -->
+  <text x="90" y="51"
+    font-family="system-ui,-apple-system,'Segoe UI',Inter,sans-serif"
+    font-size="36" letter-spacing="-0.5">
+    <tspan font-weight="300" fill="rgba(200,195,215,0.70)">Initia</tspan><tspan font-weight="700" fill="url(#tGrad)">Agent</tspan>
+  </text>
+</svg>

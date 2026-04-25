@@ -1,8 +1,5 @@
 # InitiaAgent 🤖
 
-> [!IMPORTANT]
-> **NON-COMMERCIAL HACKATHON PROJECT** — This repository is submitted exclusively for the **INITIATE Season 1 Hackathon** (Initia x DoraHacks). It is an educational and competitive submission only. No real funds are involved. Not intended for commercial use.
-
 [![Initia Hackathon](https://img.shields.io/badge/Hackathon-INITIATE--S1-blue)](https://dorahacks.io/hackathon/initiate)
 [![Network](https://img.shields.io/badge/Network-Initia--evm--1-green)](https://scan.testnet.initia.xyz/evm-1)
 
@@ -94,7 +91,8 @@ Isi `.env.local` — **pastikan tidak ada spasi di depan nama variable**:
 
 ```env
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_API_URL=http://localhost:3000/api
+# Optional (default sudah lewat rewrite /api): isi origin backend tanpa "/api"
+# NEXT_PUBLIC_API_URL=http://localhost:4000
 
 # Gemini AI — https://aistudio.google.com/app/apikey
 GEMINI_API_KEY=your_gemini_api_key_here
@@ -171,4 +169,4 @@ Setelah setup selesai:
 
 ---
 
-Built for **INITIATE Season 1** by **BCC UKDW**.
+Built for **INITIATE Season 1** by **3S DW**.

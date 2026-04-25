@@ -1,5 +1,22 @@
 # Profit Sharing
 
+InitiaAgent has three distinct fee layers. Real INIT leaves the user's wallet only for activation and subscription; everything else is settled inside the agent's mock accounting and the on-chain `ProfitSplitter` epoch flow.
+
+## Fee Layers
+
+| Layer | Token | Trigger | Rate | Recipient |
+|---|---|---|---|---|
+| **Activation** | Real INIT | Deploying an agent | `0.5 INIT` flat | Treasury |
+| **Subscription** | Real INIT | Joining someone else's agent | `0.25 INIT` flat | Treasury |
+| **Execution** | Mock USDC/INIT | Every swap | `15 bps` of notional | Protocol accounting |
+| **Realized Skim** | Mock USDC/INIT | SELL with positive PnL | `50 bps` of realized gain | Protocol accounting |
+| **Epoch Protocol Fee** | Real vault asset | `distributeProfit()` on-chain | `2%` of gross profit | Treasury |
+| **Epoch Creator Share** | Real vault asset | `distributeProfit()` on-chain | `20%` of net profit | Creator wallet |
+
+The mock-token layers (execution + realized skim) drive the live demo dashboard so subscribers can see the agent's profitability before they commit real capital via `ProfitSplitter`.
+
+## Epoch-Based On-Chain Distribution
+
 Profit distribution in InitiaAgent is automated, permissionless, and epoch-based.
 
 ## How It Works

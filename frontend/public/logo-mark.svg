@@ -1,0 +1,107 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#6622AA" stop-opacity="0.42"/>
+      <stop offset="55%"  stop-color="#3A1070" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#150430" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ffffff"  stop-opacity="1"/>
+      <stop offset="18%"  stop-color="#EE88FF"  stop-opacity="0.95"/>
+      <stop offset="48%"  stop-color="#8833BB"  stop-opacity="0.85"/>
+      <stop offset="78%"  stop-color="#4A1188"  stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#2A0855"  stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="hFill" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#4A1888" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#1A0440" stop-opacity="0.03"/>
+    </radialGradient>
+    <!-- Soft bloom for vertex dots -->
+    <filter id="dGlow" x="-250%" y="-250%" width="600%" height="600%">
+      <feGaussianBlur stdDeviation="2.8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- Very subtle line glow -->
+    <filter id="lGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="0.8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- Center bloom -->
+    <filter id="cBloom" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="9" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Ambient background glow -->
+  <circle cx="100" cy="100" r="100" fill="url(#bgGlow)"/>
+
+  <!-- ═══ OUTER HEX flat-top r=82 ═══
+       0°(182,100)  60°(141,171)  120°(59,171)
+       180°(18,100) 240°(59,29)   300°(141,29) -->
+  <polygon points="182,100 141,171 59,171 18,100 59,29 141,29"
+    fill="url(#hFill)" stroke="#9035C0" stroke-width="1.8" stroke-opacity="0.85"
+    filter="url(#lGlow)"/>
+
+  <!-- ═══ CONNECTING LINES outer→inner (3D box depth) ═══ -->
+  <!-- top-right outer → inner top -->
+  <line x1="141" y1="29"  x2="100" y2="54"  stroke="#9035C0" stroke-width="1.1" stroke-opacity="0.58"/>
+  <!-- top-left outer → inner top -->
+  <line x1="59"  y1="29"  x2="100" y2="54"  stroke="#9035C0" stroke-width="1.1" stroke-opacity="0.58"/>
+  <!-- bot-right outer → inner bot-right -->
+  <line x1="141" y1="171" x2="140" y2="123" stroke="#9035C0" stroke-width="1.1" stroke-opacity="0.58"/>
+  <!-- bot-left outer → inner bot-left -->
+  <line x1="59"  y1="171" x2="60"  y2="123" stroke="#9035C0" stroke-width="1.1" stroke-opacity="0.58"/>
+  <!-- right outer → inner top-right -->
+  <line x1="182" y1="100" x2="140" y2="77"  stroke="#9035C0" stroke-width="1.1" stroke-opacity="0.58"/>
+  <!-- left outer → inner top-left -->
+  <line x1="18"  y1="100" x2="60"  y2="77"  stroke="#9035C0" stroke-width="1.1" stroke-opacity="0.58"/>
+
+  <!-- ═══ INNER HEX pointy-top r=46 ═══
+       270°(100,54)  330°(140,77)  30°(140,123)
+       90°(100,146)  150°(60,123)  210°(60,77) -->
+  <polygon points="100,54 140,77 140,123 100,146 60,123 60,77"
+    fill="none" stroke="#9035C0" stroke-width="1.3" stroke-opacity="0.72"
+    filter="url(#lGlow)"/>
+
+  <!-- ═══ Y-LINES inner vertices → center ═══ -->
+  <line x1="100" y1="54"  x2="100" y2="100" stroke="#9035C0" stroke-width="1.15" stroke-opacity="0.7"/>
+  <line x1="140" y1="123" x2="100" y2="100" stroke="#9035C0" stroke-width="1.15" stroke-opacity="0.7"/>
+  <line x1="60"  y1="123" x2="100" y2="100" stroke="#9035C0" stroke-width="1.15" stroke-opacity="0.7"/>
+
+  <!-- ═══ OUTER VERTEX DOTS ═══ -->
+  <circle cx="182" cy="100" r="6"   fill="#BB55DD" filter="url(#dGlow)" opacity="0.9"/>
+  <circle cx="141" cy="171" r="6"   fill="#BB55DD" filter="url(#dGlow)" opacity="0.9"/>
+  <circle cx="59"  cy="171" r="6"   fill="#BB55DD" filter="url(#dGlow)" opacity="0.9"/>
+  <circle cx="18"  cy="100" r="6"   fill="#BB55DD" filter="url(#dGlow)" opacity="0.9"/>
+  <circle cx="59"  cy="29"  r="6"   fill="#BB55DD" filter="url(#dGlow)" opacity="0.9"/>
+  <circle cx="141" cy="29"  r="6"   fill="#BB55DD" filter="url(#dGlow)" opacity="0.9"/>
+  <!-- Solid cores -->
+  <circle cx="182" cy="100" r="3.2" fill="#CC77EE"/>
+  <circle cx="141" cy="171" r="3.2" fill="#CC77EE"/>
+  <circle cx="59"  cy="171" r="3.2" fill="#CC77EE"/>
+  <circle cx="18"  cy="100" r="3.2" fill="#CC77EE"/>
+  <circle cx="59"  cy="29"  r="3.2" fill="#CC77EE"/>
+  <circle cx="141" cy="29"  r="3.2" fill="#CC77EE"/>
+
+  <!-- ═══ INNER Y-JUNCTION DOTS (smaller) ═══ -->
+  <circle cx="100" cy="54"  r="2.8" fill="#AA44CC" filter="url(#dGlow)" opacity="0.75"/>
+  <circle cx="140" cy="123" r="2.8" fill="#AA44CC" filter="url(#dGlow)" opacity="0.75"/>
+  <circle cx="60"  cy="123" r="2.8" fill="#AA44CC" filter="url(#dGlow)" opacity="0.75"/>
+
+  <!-- ═══ BULLSEYE CENTER ═══ -->
+  <!-- Large soft glow bloom -->
+  <circle cx="100" cy="100" r="38" fill="url(#cGrad)" opacity="0.65" filter="url(#cBloom)"/>
+  <!-- Outer thin ring -->
+  <circle cx="100" cy="100" r="25" fill="none" stroke="#9035C0" stroke-width="1.2" stroke-opacity="0.48"/>
+  <!-- FILLED DISC (solid purple — the "lingkaran" the user sees) -->
+  <circle cx="100" cy="100" r="20" fill="#5E1A99" fill-opacity="0.82"/>
+  <!-- Bright middle ring -->
+  <circle cx="100" cy="100" r="13" fill="none" stroke="#BB55DD" stroke-width="1.5" stroke-opacity="0.82"/>
+  <!-- Inner bright fill -->
+  <circle cx="100" cy="100" r="8"  fill="#8833BB" fill-opacity="0.9"/>
+  <!-- Bright spot -->
+  <circle cx="100" cy="100" r="5"  fill="#CC66EE" filter="url(#dGlow)" opacity="0.95"/>
+  <!-- White center -->
+  <circle cx="100" cy="100" r="2.8" fill="white"/>
+</svg>

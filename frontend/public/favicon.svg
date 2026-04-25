@@ -1,0 +1,74 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#6622AA" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#150430" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ffffff"  stop-opacity="1"/>
+      <stop offset="20%"  stop-color="#EE88FF"  stop-opacity="0.95"/>
+      <stop offset="50%"  stop-color="#8833BB"  stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#2A0855"  stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="hf" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#4A1888" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#1A0440" stop-opacity="0.03"/>
+    </radialGradient>
+    <clipPath id="rnd"><rect width="32" height="32" rx="7"/></clipPath>
+    <filter id="dg" x="-250%" y="-250%" width="600%" height="600%">
+      <feGaussianBlur stdDeviation="0.7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="cb" x="-150%" y="-150%" width="400%" height="400%">
+      <feGaussianBlur stdDeviation="2.2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g clip-path="url(#rnd)">
+    <rect width="32" height="32" fill="#090415"/>
+    <circle cx="16" cy="16" r="16" fill="url(#bg)"/>
+    <!-- Outer flat-top hex r=13.5: (29.5,16)(23.2,27.7)(8.8,27.7)(2.5,16)(8.8,4.3)(23.2,4.3) -->
+    <polygon points="29.5,16 23.2,27.7 8.8,27.7 2.5,16 8.8,4.3 23.2,4.3"
+      fill="url(#hf)" stroke="#9035C0" stroke-width="0.85" stroke-opacity="0.85"/>
+    <!-- Inner pointy-top hex r=7.5: 270°(16,8.5) 330°(22.5,12.25) 30°(22.5,19.75) 90°(16,23.5) 150°(9.5,19.75) 210°(9.5,12.25) -->
+    <!-- Connecting lines -->
+    <line x1="23.2" y1="4.3"  x2="16"   y2="8.5"  stroke="#9035C0" stroke-width="0.6" stroke-opacity="0.58"/>
+    <line x1="8.8"  y1="4.3"  x2="16"   y2="8.5"  stroke="#9035C0" stroke-width="0.6" stroke-opacity="0.58"/>
+    <line x1="23.2" y1="27.7" x2="22.5" y2="19.75" stroke="#9035C0" stroke-width="0.6" stroke-opacity="0.58"/>
+    <line x1="8.8"  y1="27.7" x2="9.5"  y2="19.75" stroke="#9035C0" stroke-width="0.6" stroke-opacity="0.58"/>
+    <line x1="29.5" y1="16"   x2="22.5" y2="12.25" stroke="#9035C0" stroke-width="0.6" stroke-opacity="0.58"/>
+    <line x1="2.5"  y1="16"   x2="9.5"  y2="12.25" stroke="#9035C0" stroke-width="0.6" stroke-opacity="0.58"/>
+    <!-- Inner hex -->
+    <polygon points="16,8.5 22.5,12.25 22.5,19.75 16,23.5 9.5,19.75 9.5,12.25"
+      fill="none" stroke="#9035C0" stroke-width="0.65" stroke-opacity="0.72"/>
+    <!-- Y-lines -->
+    <line x1="16"   y1="8.5"  x2="16" y2="16" stroke="#9035C0" stroke-width="0.6" stroke-opacity="0.7"/>
+    <line x1="22.5" y1="19.75" x2="16" y2="16" stroke="#9035C0" stroke-width="0.6" stroke-opacity="0.7"/>
+    <line x1="9.5"  y1="19.75" x2="16" y2="16" stroke="#9035C0" stroke-width="0.6" stroke-opacity="0.7"/>
+    <!-- Outer vertex dots -->
+    <circle cx="29.5" cy="16"   r="1.5" fill="#BB55DD" filter="url(#dg)" opacity="0.9"/>
+    <circle cx="23.2" cy="27.7" r="1.5" fill="#BB55DD" filter="url(#dg)" opacity="0.9"/>
+    <circle cx="8.8"  cy="27.7" r="1.5" fill="#BB55DD" filter="url(#dg)" opacity="0.9"/>
+    <circle cx="2.5"  cy="16"   r="1.5" fill="#BB55DD" filter="url(#dg)" opacity="0.9"/>
+    <circle cx="8.8"  cy="4.3"  r="1.5" fill="#BB55DD" filter="url(#dg)" opacity="0.9"/>
+    <circle cx="23.2" cy="4.3"  r="1.5" fill="#BB55DD" filter="url(#dg)" opacity="0.9"/>
+    <circle cx="29.5" cy="16"   r="0.8" fill="#CC77EE"/>
+    <circle cx="23.2" cy="27.7" r="0.8" fill="#CC77EE"/>
+    <circle cx="8.8"  cy="27.7" r="0.8" fill="#CC77EE"/>
+    <circle cx="2.5"  cy="16"   r="0.8" fill="#CC77EE"/>
+    <circle cx="8.8"  cy="4.3"  r="0.8" fill="#CC77EE"/>
+    <circle cx="23.2" cy="4.3"  r="0.8" fill="#CC77EE"/>
+    <!-- Inner Y-junction dots -->
+    <circle cx="16"   cy="8.5"  r="0.7" fill="#AA44CC" filter="url(#dg)" opacity="0.75"/>
+    <circle cx="22.5" cy="19.75" r="0.7" fill="#AA44CC" filter="url(#dg)" opacity="0.75"/>
+    <circle cx="9.5"  cy="19.75" r="0.7" fill="#AA44CC" filter="url(#dg)" opacity="0.75"/>
+    <!-- Bullseye -->
+    <circle cx="16" cy="16" r="6"   fill="url(#cg)"   opacity="0.65" filter="url(#cb)"/>
+    <circle cx="16" cy="16" r="4"   fill="none" stroke="#9035C0" stroke-width="0.5" stroke-opacity="0.48"/>
+    <circle cx="16" cy="16" r="3.2" fill="#5E1A99" fill-opacity="0.82"/>
+    <circle cx="16" cy="16" r="2.1" fill="none" stroke="#BB55DD" stroke-width="0.6" stroke-opacity="0.82"/>
+    <circle cx="16" cy="16" r="1.3" fill="#8833BB" fill-opacity="0.9"/>
+    <circle cx="16" cy="16" r="0.8" fill="#CC66EE" filter="url(#dg)" opacity="0.95"/>
+    <circle cx="16" cy="16" r="0.45" fill="white"/>
+  </g>
+</svg>

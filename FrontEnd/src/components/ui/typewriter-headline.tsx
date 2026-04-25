@@ -59,7 +59,7 @@ export function TypewriterHeadline() {
   }, [phase, displayedText2, isDeleting, wordIndex]);
 
   return (
-    <h1 className="relative max-w-4xl text-4xl font-light tracking-tight sm:text-7xl min-h-[4em] sm:min-h-[2.5em] px-2 text-zinc-200">
+    <h1 className="relative max-w-4xl text-4xl font-light tracking-tight sm:text-7xl min-h-[4em] sm:min-h-[2.5em] px-2 text-zinc-200 text-balance">
       {/* Invisible placeholder */}
       <div className="invisible">
         AI-Powered DeFi Trading <br className="hidden sm:inline" />
@@ -86,7 +86,7 @@ export function TypewriterHeadline() {
           <motion.span
             animate={{ opacity: [1, 0] }}
             transition={{ repeat: Infinity, duration: 0.8 }}
-            className="inline-block w-[2px] md:w-[3px] h-[0.85em] bg-emerald-400 ml-1 align-middle -translate-y-[0.05em]"
+            className="inline-block w-[2px] md:w-[3px] h-[0.85em] bg-purple-400 ml-1 align-middle -translate-y-[0.05em]"
           />
         )}
       </div>

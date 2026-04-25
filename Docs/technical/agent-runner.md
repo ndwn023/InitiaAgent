@@ -90,7 +90,7 @@ Each signal includes:
 - **Reasoning** — explanation of the analysis
 - **Risk level** — assessment of the trade's risk
 
-The AI engine uses a multi-model cascade — Anthropic Claude Sonnet 4.6 (primary) with Google Gemini and Claude CLI as fallbacks — with market data from CoinGecko and Pyth Network. It supports multiple strategy types (DCA, LP Rebalancing, Yield Optimization, VIP Maximizer).
+The AI engine uses Google Gemini models with market data from CoinGecko and Pyth Network. It supports multiple strategy types (DCA, LP Rebalancing, Yield Optimization, VIP Maximizer).
 
 ### Analysis Interval
 
@@ -105,7 +105,7 @@ The dashboard runs AI analysis every **5 minutes**, displaying results in the AI
 
 ```mermaid
 flowchart TD
-    P["Price Feeds\n(CoinGecko / Pyth)"] --> AI["AI Model Cascade\n(Claude → Gemini → CLI)"]
+    P["Price Feeds\n(CoinGecko / Pyth)"] --> AI["Google Gemini AI"]
     S["Strategy Params\n(type, target, risk)"] --> AI
     C["Portfolio Context\n(capital, agents, profit)"] --> AI
     AI --> Signal{"Signal"}

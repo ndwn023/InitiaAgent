@@ -1,12 +1,29 @@
 {
   "project_name": "InitiaAgent",
-  "repo_url": "https://github.com/initiatiHacksUKDW/initiateHacksUKDW",
-  "commit_sha": "3b716d1d94e7d76680a20eb18d6407b92d7a5ef8",
-  "rollup_chain_id": "evm-1",
-  "deployed_address": "0xBF1Bf9E5113fdF25b2104c9494F518C46caC3C5D",
-  "vm": "evm",
-  "native_feature": "auto-signing",
-  "core_logic_path": "SmartContract/src/AgentVault.sol",
-  "native_feature_frontend_path": "FrontEnd/src/components/AutoSigningNavbar.tsx",
-  "demo_video_url": "https://youtu.be/PLACEHOLDER"
+  "description": "A non-custodial AI trading agent marketplace built on Initia EVM. Features automated strategy execution, profit distribution, and advanced security through Initia-native session UX.",
+  "rollup_chain_id": "2124225178762456",
+  "repository_url": "https://github.com/ndwn023/InitiaAgent",
+  "demo_video_url": "https://www.youtube.com/watch?v=g0jYPD1gF14",
+  "team_name": "3S DW",
+  "track": [
+    "DeFi",
+    "AI & Tooling"
+  ],
+  "deployed_contracts": [
+    {
+      "name": "AgentRegistry",
+      "address": "0xBF1Bf9E5113fdF25b2104c9494F518C46caC3C5D"
+    },
+    {
+      "name": "AgentExecutor",
+      "address": "0x0777CA550E0dFB9c64deb88A871a3ad867c2e014"
+    },
+    {
+      "name": "ProfitSplitter",
+      "address": "0x9D925037CA3e28d3943cea6aA7cBF36b4f681D9F"
+    }
+  ],
+  "native_features_implemented": [
+    "Session UX / Auto-signing"
+  ]
 }

@@ -9,7 +9,7 @@ InitiaAgent v1 is built for the INITIATE Season 1 hackathon (deadline: April 16,
 - 4 core smart contracts deployed and tested (71 tests passing)
 - Full frontend with marketplace, builder, dashboard, and AI chat
 - InterwovenKit wallet integration with Session UX
-- AI-powered market analysis and strategy skills via Anthropic Claude + Google Gemini cascade
+- AI-powered market analysis via Google Gemini
 - Live price feeds from CoinGecko and Pyth Network
 - Non-custodial deposit/withdraw flow
 - Epoch-based profit distribution

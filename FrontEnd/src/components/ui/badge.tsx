@@ -9,7 +9,7 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-emerald-500/12 text-emerald-400 border-emerald-500/15",
+        default: "bg-purple-500/10 text-purple-400 border-purple-500/15",
         secondary:
           "bg-white/[0.05] text-zinc-400 border-white/[0.06]",
         destructive:
@@ -18,7 +18,7 @@ const badgeVariants = cva(
           "border-white/[0.08] text-zinc-500",
         ghost:
           "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]",
-        link: "text-emerald-400 underline-offset-4 hover:underline",
+        link: "text-purple-400 underline-offset-4 hover:underline",
       },
     },
     defaultVariants: {

@@ -1,17 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import type { MarketAnalysis } from "@/lib/ai-agent";
+import React, { useState, useEffect, useRef } from "react";
+import type { MarketAnalysis } from "@initia-agent/shared";
+import { getModelMeta } from "@/lib/model-labels";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,6 +14,7 @@ import {
   Activity,
   Loader2,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   ExternalLink,
   Wallet,
@@ -29,7 +23,6 @@ import {
 } from "lucide-react";
 import { useAgents } from "@/lib/hooks/use-agents";
 import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Line,
@@ -39,28 +32,83 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { CONTRACTS } from "@/lib/constants";
+import {
+  CONTRACTS,
+  INITIA_EVM_CHAIN_ID,
+  SUPPORTED_AGENT_INTERVALS as AGENT_INTERVAL_OPTIONS,
+  explorerEvmTxUrl,
+} from "@initia-agent/shared";
 import { useAccount, useSwitchChain, useBalance } from "wagmi";
-import { ERC20ABI } from "@/lib/abis/ERC20";
-import { AgentVaultABI } from "@/lib/abis/AgentVault";
-import { AgentRegistryABI } from "@/lib/abis/AgentRegistry";
-import { AgentExecutorABI } from "@/lib/abis/AgentExecutor";
-import { ProfitSplitterABI } from "@/lib/abis/ProfileSplitter";
-import { parseUnits, decodeEventLog } from "viem";
 import { useInterwovenEvm } from "@/lib/hooks/use-interwoven-evm";
+import { useActivationFee } from "@/lib/hooks/use-activation-fee";
+import { useMockWallet } from "@/lib/hooks/use-mock-wallet";
+
+const AI_ANALYSIS_MODELS = [
+  { id: "claude-haiku-4-5",  badge: "Fast",  provider: "anthropic" },
+  { id: "claude-sonnet-4-6", badge: "Best",  provider: "anthropic" },
+  { id: "claude-opus-4-6",   badge: "Pro",   provider: "anthropic" },
+  { id: "claude-cli",        badge: "Local", provider: "anthropic" },
+  { id: "gemini-2.5-flash",  badge: "Fast",  provider: "gemini" },
+  { id: "gemini-3-flash",    badge: "Fast",  provider: "gemini" },
+  { id: "gemini-3.1-pro",    badge: "Smart", provider: "gemini" },
+];
+
+const BUILDER_INTERVAL_OPTIONS = AGENT_INTERVAL_OPTIONS.filter(
+  (interval) => interval !== "30 Seconds" && interval !== "1 Minute" && interval !== "8 Hours"
+);
+
+const STRATEGY_SKILLS: Record<string, {
+  label: string;
+  tagline: string;
+  skills: string[];
+  indicators: string[];
+  bgColor: string;
+  iconColor: string;
+  dotColor: string;
+  badgeColor: string;
+}> = {
+  DCA: {
+    label: "Dollar Cost Averaging",
+    tagline: "Accumulate on every dip — cost basis tracking built-in",
+    skills: ["Dip Entry Detector", "Accumulation Engine", "Cost Basis Tracker", "DCA Interval Optimizer", "Market Breadth Filter"],
+    indicators: ["RSI < 35 oversold", "EMA 20/50 crossover", "Volume spike +2σ", "24h momentum score", "Breadth > 45%"],
+    bgColor: "bg-blue-500/10", iconColor: "text-blue-400", dotColor: "bg-blue-400/60", badgeColor: "border-blue-500/20 text-blue-400",
+  },
+  LP: {
+    label: "LP Auto-Rebalancing",
+    tagline: "Maximize fee income while guarding against IL",
+    skills: ["IL Protection Guard", "Fee APR Optimizer", "Pool Rebalance Trigger", "Depth Scanner", "Volatility Regime Router"],
+    indicators: ["Pool ratio deviation >5%", "Volume/TVL ratio", "Fee 24h APR", "Price range delta", "Intraday volatility %"],
+    bgColor: "bg-purple-500/10", iconColor: "text-purple-400", dotColor: "bg-purple-400/60", badgeColor: "border-purple-500/20 text-purple-400",
+  },
+  YIELD: {
+    label: "Yield Optimizer",
+    tagline: "Chase highest APY — rotate protocols on decay",
+    skills: ["APY Scanner", "Protocol Rotation Engine", "Harvest Timer", "Compound Frequency Optimizer", "Cross-Asset Leader Scanner"],
+    indicators: ["APY delta 7d", "Emissions decay rate", "Utilization ratio", "Reward token trend", "Leader momentum map"],
+    bgColor: "bg-amber-500/10", iconColor: "text-amber-400", dotColor: "bg-amber-400/60", badgeColor: "border-amber-500/20 text-amber-400",
+  },
+  VIP: {
+    label: "VIP Maximizer",
+    tagline: "Retain tier status — compound esINIT automatically",
+    skills: ["Tier Retention Monitor", "esINIT Compounder", "Epoch Timing Tracker", "Volume Threshold Manager", "Breakout Sniper"],
+    indicators: ["esINIT APR", "VIP tier threshold", "Epoch progress %", "Loyalty multiplier", "Risk-on regime + leader confirmation"],
+    bgColor: "bg-rose-500/10", iconColor: "text-rose-400", dotColor: "bg-rose-400/60", badgeColor: "border-rose-500/20 text-rose-400",
+  },
+};
 
 export default function BuilderPage() {
   const router = useRouter();
   const { addAgent } = useAgents();
-  const { writeContract } = useInterwovenEvm();
-  const INITIA_CHAIN_ID = 2124225178762456;
+  const { signMockAction } = useInterwovenEvm();
   const { chainId, address } = useAccount();
   const { switchChainAsync } = useSwitchChain();
-  const { data: balance } = useBalance({
-    address: address as `0x${string}`,
-    token: CONTRACTS.MOCK_INIT as `0x${string}`,
-    chainId: INITIA_CHAIN_ID,
+  const { data: walletInitBalance } = useBalance({
+    address,
+    chainId: INITIA_EVM_CHAIN_ID,
   });
+  const { initBalance, formattedInit, spendInit } = useMockWallet(address, Number(walletInitBalance?.formatted ?? 0));
+  const { chargeFee, activationFeeInit } = useActivationFee();
 
   const [strategy, setStrategy] = useState("DCA");
   const [targetTokens, setTargetTokens] = useState<string[]>(["USDC"]);
@@ -74,49 +122,83 @@ export default function BuilderPage() {
   const [isSimulating, setIsSimulating] = useState(false);
   const [showSimulation, setShowSimulation] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<MarketAnalysis | null>(null);
+  const [analysisModel, setAnalysisModel] = useState("gemini-2.5-flash");
+  const [analysisModelMenuOpen, setAnalysisModelMenuOpen] = useState(false);
+  const [analysisMenuPos, setAnalysisMenuPos] = useState({ top: 0, right: 0 });
+  const analysisModelBtnRef = useRef<HTMLButtonElement>(null);
+  const [apiKeyStatus, setApiKeyStatus] = useState<{ anthropic: boolean; gemini: boolean }>({ anthropic: true, gemini: true });
 
   const [agentName, setAgentName] = useState("");
   const [agentDesc, setAgentDesc] = useState("");
   const [initialCapital, setInitialCapital] = useState("5");
-  const [mounted, setMounted] = useState(false);
 
-  // Risk & Execution settings
   const [takeProfitPct, setTakeProfitPct] = useState("20");
   const [stopLossPct, setStopLossPct] = useState("10");
   const [minConfidence, setMinConfidence] = useState("50");
   const [tradeSizePct, setTradeSizePct] = useState("10");
+  const [wizardStep, setWizardStep] = useState(1);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    fetch("/api/agent/strategy-skills")
+      .then(r => r.json())
+      .then(d => {
+        if (d?.apiKeys) {
+          setApiKeyStatus(d.apiKeys);
+          setAnalysisModel((currentModel) => {
+            if (!d.apiKeys.anthropic && currentModel.startsWith("claude") && currentModel !== "claude-cli") {
+              return "gemini-2.5-flash";
+            }
+            if (!d.apiKeys.gemini && currentModel.startsWith("gemini")) {
+              return "claude-cli";
+            }
+            return currentModel;
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const [deploymentStatus, setDeploymentStatus] = useState<
-    "idle" | "preparing" | "funding" | "signing" | "broadcasting" | "success"
+    "idle" | "preparing" | "funding" | "signing" | "broadcasting" | "approving" | "deploying" | "success" | "failed"
   >("idle");
   const [txHash, setTxHash] = useState("");
+  const [deploymentError, setDeploymentError] = useState("");
 
   const capitalVal = parseFloat(initialCapital) || 0;
 
+  // Projection varies by interval — shorter intervals = more trades but slippage-heavy, longer = fewer but bigger moves
+  const intervalProjection: Record<string, number[]> = {
+    "30 Seconds": [1, 1.005, 1.003, 1.007, 1.006, 1.004, 1.008],
+    "5 Minutes":  [1, 1.01,  1.008, 1.015, 1.012, 1.011, 1.02],
+    "15 Minutes": [1, 1.02,  1.015, 1.03,  1.027, 1.025, 1.04],
+    "30 Minutes": [1, 1.03,  1.025, 1.05,  1.045, 1.04,  1.07],
+    "1 Hour":     [1, 1.04,  1.02,  1.07,  1.09,  1.08,  1.12],
+    "4 Hours":    [1, 1.05,  1.02,  1.10,  1.15,  1.13,  1.20],
+    "12 Hours":   [1, 1.06,  1.03,  1.12,  1.17,  1.14,  1.22],
+    "24 Hours":   [1, 1.05,  1.02,  1.10,  1.15,  1.13,  1.25],
+  };
+  const proj = intervalProjection[interval] ?? intervalProjection["1 Hour"];
+
   const simulationData = [
-    { day: "1", value: capitalVal },
-    { day: "5", value: capitalVal * 1.05 },
-    { day: "10", value: capitalVal * 1.02 },
-    { day: "15", value: capitalVal * 1.1 },
-    { day: "20", value: capitalVal * 1.15 },
-    { day: "25", value: capitalVal * 1.13 },
-    { day: "30", value: capitalVal * 1.25 },
+    { day: "1",  value: capitalVal * proj[0] },
+    { day: "5",  value: capitalVal * proj[1] },
+    { day: "10", value: capitalVal * proj[2] },
+    { day: "15", value: capitalVal * proj[3] },
+    { day: "20", value: capitalVal * proj[4] },
+    { day: "25", value: capitalVal * proj[5] },
+    { day: "30", value: capitalVal * proj[6] },
   ];
 
   const handleSimulate = async () => {
     setIsSimulating(true);
     setShowSimulation(false);
     setAiAnalysis(null);
-
     try {
-      const res = await fetch("/api/agent/analyze", {
+      const res = await fetch("/api/agent/analyze?mode=ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ strategy, targetToken: targetTokens[0] || "USDC", pool: pools.join(", "), protocol, vault, capital: capitalVal, interval }),
+        body: JSON.stringify({ strategy, targetToken: targetTokens[0] || "USDC", pool: pools.join(", "), protocol, vault, capital: capitalVal, interval, model: analysisModel }),
       });
-
       if (res.ok) {
         const analysis = await res.json();
         setAiAnalysis(analysis);
@@ -124,38 +206,32 @@ export default function BuilderPage() {
     } catch (err) {
       console.error("AI analysis failed:", err);
     }
-
     setIsSimulating(false);
     setShowSimulation(true);
   };
 
   const applyRecommendation = () => {
-    setStrategy("DCA");
+    setStrategy("VIP");
     setTargetTokens(["USDC"]);
     setPools(["INIT/USDC"]);
-    setIntervalVal("1 Hour");
+    setIntervalVal("30 Minutes");
+    // Tighter take-profit (20%) realises gains more frequently than 30%.
+    // Smaller stop-loss (8%) exits quickly before drawdowns compound.
+    // Lower min-confidence (45%) lets the aggressive VIP engine enter early on momentum.
+    // 20% trade size: large enough to move the needle, not so large that one bad trade wipes out gains.
     setTakeProfitPct("20");
-    setStopLossPct("10");
-    setMinConfidence("30");
+    setStopLossPct("8");
+    setMinConfidence("45");
     setTradeSizePct("20");
-    setRiskLevel("Medium");
+    setRiskLevel("High");
     setProtocol("InitiaLend");
     setVault("Main Vault");
     setFrequency("Daily");
     setShowSimulation(false);
     setAiAnalysis(null);
-
-    if (!agentName.trim()) {
-      setAgentName("INIT Momentum DCA");
-    }
-
-    if (!agentDesc.trim()) {
-      setAgentDesc("Optimized INIT/USDC agent that accumulates on AI buy signals and exits into INIT when momentum weakens.");
-    }
-
-    toast.success("Recommendation applied", {
-      description: "Builder set to the recommended INIT/USDC configuration.",
-    });
+    if (!agentName.trim()) setAgentName("INIT Breakout VIP");
+    if (!agentDesc.trim()) setAgentDesc("Aggressive INIT/USDC setup that presses momentum in risk-on regime and de-risks fast when momentum fades.");
+    toast.success("Recommendation applied", { description: "Builder set to profit-optimised VIP config: 20% size · 8% SL · 20% TP · 45% min-conf." });
   };
 
   const handleDeploy = async () => {
@@ -163,698 +239,679 @@ export default function BuilderPage() {
       toast.error("Validation Error", { description: "Please enter an Agent Name to proceed with deployment." });
       return;
     }
-
-    if (chainId !== INITIA_CHAIN_ID) {
+    const deployCapital = Number(initialCapital);
+    if (!Number.isFinite(deployCapital) || deployCapital <= 0) {
+      toast.error("Validation Error", { description: "Initial capital must be greater than 0." });
+      return;
+    }
+    if (deployCapital > initBalance) {
+      toast.error("Insufficient Mock INIT", { description: "Top up Mock INIT in wallet panel or lower the capital amount." });
+      return;
+    }
+    if (chainId !== INITIA_EVM_CHAIN_ID) {
       try {
-        await switchChainAsync({ chainId: INITIA_CHAIN_ID });
-      } catch (err) {
+        await switchChainAsync({ chainId: INITIA_EVM_CHAIN_ID });
+      } catch {
         toast.error("Network Error", { description: "Please switch to Initia evm-1 in your wallet." });
         return;
       }
     }
-
+    setTxHash("");
+    setDeploymentError("");
     setDeploymentStatus("preparing");
     const vaultAddress = CONTRACTS.AGENT_VAULT_DEFAULT as `0x${string}`;
     let deployTxHash = "";
-    let onChainAgentId = "";
-
     try {
-      // Step 1: Approve vault to spend MOCK_INIT
-      setDeploymentStatus("funding");
-      await writeContract({
-        address: CONTRACTS.MOCK_INIT as `0x${string}`,
-        abi: ERC20ABI,
-        functionName: "approve",
-        args: [vaultAddress, parseUnits(initialCapital, 18)],
-      });
-
-      // Step 2: Deposit into vault — this is the main "deploy" tx
       setDeploymentStatus("signing");
-      deployTxHash = await writeContract({
-        address: vaultAddress,
-        abi: AgentVaultABI,
-        functionName: "deposit",
-        args: [parseUnits(initialCapital, 18)],
+      const receipt = await chargeFee("activation");
+      toast.success("Activation fee paid", {
+        description: `${activationFeeInit} INIT → treasury (${receipt.txHash.slice(0, 10)}…)`,
       });
 
-      // Step 3: Register agent in registry → get on-chain agentId
-      setDeploymentStatus("broadcasting");
-      try {
-        const regTxHash = await writeContract({
-          address: CONTRACTS.AGENT_REGISTRY as `0x${string}`,
-          abi: AgentRegistryABI,
-          functionName: "registerAgent",
-          args: [agentName, strategy, vaultAddress],
-        });
-        // agentId is returned in the tx receipt event — store hash for now,
-        // we'll read agentId from vault directly on next load
-        onChainAgentId = regTxHash; // placeholder until receipt decoded
-      } catch (err) {
-        console.warn("registerAgent failed (vault may already be registered):", err);
+      deployTxHash = await signMockAction();
+      if (!spendInit(deployCapital)) {
+        throw new Error("Insufficient Mock INIT balance");
       }
-
-      // Step 4: Register vault in ProfitSplitter
-      try {
-        // Read agentId from vault contract
-        const vaultAgentId = BigInt(1); // default for Agent #1 vault
-        await writeContract({
-          address: CONTRACTS.PROFIT_SPLITTER as `0x${string}`,
-          abi: ProfitSplitterABI,
-          functionName: "registerVault",
-          args: [vaultAgentId, vaultAddress],
-        });
-      } catch (err) {
-        console.warn("registerVault failed (may already be registered):", err);
-      }
-
-      // Step 5: Authorize self as runner in executor
-      try {
-        const vaultAgentId = BigInt(1);
-        await writeContract({
-          address: CONTRACTS.AGENT_EXECUTOR as `0x${string}`,
-          abi: AgentExecutorABI,
-          functionName: "authorizeRunner",
-          args: [vaultAgentId, address as `0x${string}`],
-        });
-      } catch (err) {
-        console.warn("authorizeRunner failed (may already be authorized):", err);
-      }
-
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
       console.warn("Deployment failed:", err);
-      setDeploymentStatus("idle");
+      setDeploymentError(message);
+      setDeploymentStatus("failed");
+      toast.error("Deploy failed", { description: message.slice(0, 160) || "Transaction failed or was rejected." });
       return;
     }
-
     setTxHash(deployTxHash);
-
-    await addAgent({
-      id: Math.random().toString(36).substr(2, 9),
-      name: agentName,
-      strategy: strategy,
-      target: targetTokens[0] || "USDC",
-      pool: pools.join(", "),
-      protocol: protocol,
-      vault: vault,
-      status: "Active",
-      deployedAt: new Date().toISOString(),
-      txHash: deployTxHash,
-      contractAddress: vaultAddress,
-      initialCapital: parseFloat(initialCapital) || 0,
-      creatorAddress: address || "",
-      interval: interval,
-      isSubscription: false,
-      takeProfitPct: parseFloat(takeProfitPct) || 20,
-      stopLossPct: parseFloat(stopLossPct) || 10,
-      minConfidence: parseFloat(minConfidence) || 50,
-      tradeSizePct: parseFloat(tradeSizePct) || 10,
-      onChainAgentId: "1", // Agent #1 vault
-    });
-
-    setDeploymentStatus("success");
+    setDeploymentStatus("broadcasting");
+    try {
+      await addAgent({
+        id: Math.random().toString(36).substr(2, 9),
+        name: agentName, strategy, target: targetTokens[0] || "USDC", pool: pools.join(", "), protocol, vault,
+        status: "Active", deployedAt: new Date().toISOString(), txHash: deployTxHash,
+        contractAddress: vaultAddress, initialCapital: deployCapital,
+        creatorAddress: address || "", interval, isSubscription: false,
+        takeProfitPct: parseFloat(takeProfitPct) || 20, stopLossPct: parseFloat(stopLossPct) || 10,
+        minConfidence: parseFloat(minConfidence) || 50, tradeSizePct: parseFloat(tradeSizePct) || 10,
+        onChainAgentId: "1",
+      });
+      setDeploymentStatus("success");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn("Persisting deployed agent failed:", err);
+      setDeploymentError(message);
+      setDeploymentStatus("failed");
+      toast.error("Deploy saved failed", { description: message.slice(0, 160) || "On-chain success, but failed to save agent data." });
+    }
   };
 
-  // Shared selection button style
   const selectBtn = (active: boolean) =>
     `flex-1 transition-all duration-[400ms] [transition-timing-function:cubic-bezier(0.36,0.2,0.07,1)] ${
       active
-        ? "border-emerald-500/20 bg-emerald-500/[0.06] text-emerald-400"
+        ? "border-purple-500/20 bg-purple-500/[0.06] text-purple-400"
         : "border-white/[0.06] text-zinc-500 hover:bg-white/[0.04] hover:text-zinc-300"
     }`;
 
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto">
-      <div className="relative mb-8">
-        <div className="absolute -top-20 left-1/4 w-[400px] h-[250px] radial-glow pointer-events-none opacity-30" />
-        <motion.div
-          initial={{ opacity: 0, y: -15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.36, 0.2, 0.07, 1] }}
-          className="relative"
-        >
-          <h1 className="text-2xl font-light tracking-tight text-zinc-200 sm:text-3xl">
-            Agent <span className="text-gradient font-bold">Builder</span>
+    <div className="flex flex-col min-h-screen lg:h-[calc(100vh-4rem)] lg:overflow-hidden">
+
+      {/* ── TOP HEADER BAR ── */}
+      <div className="shrink-0 flex items-center justify-between gap-3 px-5 md:px-8 pt-5 pb-4 border-b border-white/[0.06]">
+        <div className="shrink-0">
+          <h1 className="text-[1.3rem] text-white leading-tight" style={{ fontFamily: "var(--font-heading)" }}>
+            Agent <span className="text-gradient">Builder</span>
           </h1>
-          <p className="mt-2 text-zinc-600 text-sm">
-            Create a new AI trading agent without writing code. Configure your strategy and deploy to Initia.
-          </p>
-        </motion.div>
+        </div>
+        <div className="flex items-center gap-1 p-1 rounded-[12px]" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          {[{ id: 1, label: "Strategy & Config" }, { id: 2, label: "Risk & Deploy" }].map((s) => {
+            const isActive = wizardStep === s.id;
+            const isDone = wizardStep > s.id;
+            return (
+              <button key={s.id} onClick={() => { if (isDone || isActive) setWizardStep(s.id); }}
+                className="flex items-center gap-2 px-3 md:px-4 h-8 rounded-[8px] text-[12px] font-medium transition-all duration-200"
+                style={{ background: isActive ? "#7b39fc" : "transparent", color: isActive ? "white" : isDone ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.35)", fontFamily: "var(--font-cabin)" }}>
+                <span className="h-4 w-4 rounded-full text-[9px] flex items-center justify-center font-bold shrink-0"
+                  style={{ background: isActive ? "rgba(255,255,255,0.25)" : isDone ? "rgba(123,57,252,0.4)" : "rgba(255,255,255,0.08)", color: isActive || isDone ? "white" : "rgba(255,255,255,0.3)" }}>
+                  {isDone ? "✓" : s.id}
+                </span>
+                <span className="hidden sm:inline whitespace-nowrap">{s.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <button onClick={applyRecommendation}
+          className="shrink-0 flex items-center gap-2 px-3 h-9 rounded-[10px] text-white text-[12px] font-medium hover:opacity-90 transition-all"
+          style={{ background: "#2b2344", border: "1px solid rgba(123,57,252,0.3)", fontFamily: "var(--font-cabin)" }}>
+          <Sparkles className="h-3.5 w-3.5" style={{ color: "#a78bfa" }} />
+          <span className="hidden sm:inline">Best Config</span>
+        </button>
       </div>
 
-      <div className="grid gap-5 grid-cols-1 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-5">
-          {/* Step 1: Strategy */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1, ease: [0.36, 0.2, 0.07, 1] }}
-          >
-            <Card className="bg-white/[0.02] border-white/[0.04]">
-              <CardHeader>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <CardTitle className="text-zinc-200 text-base font-medium">1. Select Strategy</CardTitle>
-                    <CardDescription>Choose the core logic for your agent.</CardDescription>
+      {/* ── CONTENT AREA ── */}
+      <div className="flex-1 min-h-0 relative overflow-hidden">
+        <AnimatePresence mode="wait">
+
+          {/* STEP 1: Strategy + Configure */}
+          {wizardStep === 1 && (
+            <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3, ease: [0.36, 0.2, 0.07, 1] }}
+              className="absolute inset-0 overflow-y-auto scrollbar-hide px-5 md:px-8 py-5">
+              <div className="grid grid-cols-1 lg:grid-cols-3 lg:grid-rows-2 gap-5 lg:h-full pb-4">
+
+                {/* Row 1: Strategy (positions 1,2) */}
+                <div className="flex flex-col gap-3 lg:col-span-2">
+                  <p className="text-white/40 text-[11px] font-semibold uppercase tracking-wider shrink-0" style={{ fontFamily: "var(--font-manrope)" }}>Choose Strategy</p>
+                  <div className="grid grid-cols-2 grid-rows-2 gap-3 flex-1">
+                    {[
+                      { id: "DCA", name: "Dollar Cost Averaging", desc: "Regular intervals with AI timing", icon: "⟳", accent: "rgba(99,102,241,0.2)", border: "rgba(99,102,241,0.4)" },
+                      { id: "LP",  name: "LP Auto-Rebalancing",   desc: "Maximize fee income vs IL",        icon: "⇌", accent: "rgba(123,57,252,0.2)", border: "rgba(123,57,252,0.4)" },
+                      { id: "YIELD", name: "Yield Optimizer",     desc: "Chase highest APY dynamically",   icon: "◈", accent: "rgba(245,158,11,0.15)", border: "rgba(245,158,11,0.3)" },
+                      { id: "VIP",  name: "VIP Maximizer",        desc: "Retain tier, compound rewards",   icon: "★", accent: "rgba(244,63,94,0.15)",  border: "rgba(244,63,94,0.3)" },
+                    ].map(s => {
+                      const isSelected = strategy === s.id;
+                      return (
+                        <div key={s.id} onClick={() => {
+                            setStrategy(s.id);
+                            setShowSimulation(false);
+                            setAiAnalysis(null);
+                            // Set profit-optimized defaults per strategy
+                            if (s.id === "DCA") {
+                              setIntervalVal("4 Hours");
+                              setTradeSizePct("6");
+                              setTakeProfitPct("15");
+                              setStopLossPct("15");
+                              setMinConfidence("45");
+                            } else if (s.id === "LP") {
+                              setIntervalVal("1 Hour");
+                              setTradeSizePct("10");
+                              setTakeProfitPct("20");
+                              setStopLossPct("10");
+                              setMinConfidence("50");
+                            } else if (s.id === "YIELD") {
+                              setIntervalVal("4 Hours");
+                              setTradeSizePct("12");
+                              setTakeProfitPct("10");
+                              setStopLossPct("12");
+                              setMinConfidence("55");
+                            } else if (s.id === "VIP") {
+                              setIntervalVal("30 Minutes");
+                              setTradeSizePct("20");
+                              setTakeProfitPct("20");
+                              setStopLossPct("8");
+                              setMinConfidence("45");
+                            }
+                          }}
+                          className="cursor-pointer rounded-[18px] p-4 flex flex-col gap-2 transition-all duration-300 hover:scale-[1.02] h-full"
+                          style={{
+                            background: isSelected ? s.accent : "rgba(255,255,255,0.04)",
+                            border: `1px solid ${isSelected ? s.border : "rgba(255,255,255,0.08)"}`,
+                            backdropFilter: "blur(20px)",
+                            boxShadow: isSelected ? `0 0 20px -8px ${s.border}` : "none",
+                          }}>
+                          <div className="flex justify-between items-start">
+                            <span className="text-2xl opacity-70">{s.icon}</span>
+                            {isSelected && <div className="h-2 w-2 rounded-full" style={{ background: "#7b39fc" }} />}
+                          </div>
+                          <div className="mt-auto">
+                            <p className="text-[13px] font-semibold text-white/90 leading-snug" style={{ fontFamily: "var(--font-manrope)" }}>{s.name}</p>
+                            <p className="text-[11px] text-white/40 mt-0.5">{s.desc}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <Button
-                    variant="outline"
-                    className="shrink-0 border-emerald-500/20 bg-emerald-500/[0.05] text-emerald-400 hover:bg-emerald-500/[0.08] hover:text-emerald-300"
-                    onClick={applyRecommendation}
-                  >
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Best Recommendation
-                  </Button>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {[
-                    { id: "DCA", name: "Dollar Cost Averaging", desc: "Buy tokens at regular intervals." },
-                    { id: "LP", name: "LP Auto-Rebalancing", desc: "Maintain optimal liquidity pool ratios." },
-                    { id: "YIELD", name: "Yield Optimizer", desc: "Chase highest APY across protocols." },
-                    { id: "VIP", name: "VIP Maximizer", desc: "Auto-claim and reinvest VIP rewards." },
-                  ].map((s) => (
-                    <div
-                      key={s.id}
-                      onClick={() => { setStrategy(s.id); setShowSimulation(false); }}
-                      className={`cursor-pointer rounded-[20px] border p-5 transition-all duration-[400ms] [transition-timing-function:cubic-bezier(0.36,0.2,0.07,1)] ${
-                        strategy === s.id
-                          ? "border-emerald-500/15 bg-emerald-500/[0.04]"
-                          : "border-white/[0.05] bg-white/[0.01] hover:border-white/[0.08]"
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="font-medium text-sm text-zinc-200">{s.name}</div>
-                        {strategy === s.id && (
-                          <div className="w-2 h-2 rounded-full bg-emerald-500/60" />
-                        )}
+
+                {/* Row 2: Configure (positions 3,4) */}
+                <div className="flex flex-col gap-3 lg:col-span-2">
+                  <p className="text-white/40 text-[11px] font-semibold uppercase tracking-wider shrink-0" style={{ fontFamily: "var(--font-manrope)" }}>Configure {strategy}</p>
+                  <div className="rounded-[18px] p-5 flex flex-col gap-4 flex-1" style={{ background: "rgba(255,255,255,0.04)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    <AnimatePresence mode="wait">
+                      {strategy === "DCA" && (
+                        <motion.div key="dca" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[13px] font-medium text-white/60">Trading Pair</label>
+                              <span className="text-[10px] text-white/30">Fixed: INIT/USDC</span>
+                            </div>
+                            <Button variant="outline" className={selectBtn(true)}>INIT / USDC</Button>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[13px] font-medium text-white/60">Buy Interval</label>
+                            <div className="flex gap-2 flex-wrap">
+                              {BUILDER_INTERVAL_OPTIONS.map(i => (
+                                <Button key={i} variant="outline" onClick={() => setIntervalVal(i)} className={selectBtn(interval === i)}>{i}</Button>
+                              ))}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                      {strategy === "LP" && (
+                        <motion.div key="lp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[13px] font-medium text-white/60">Target Pools</label>
+                              <span className="text-[10px] text-white/30">{pools.length} selected</span>
+                            </div>
+                            <div className="flex gap-2 flex-wrap">
+                              {["INIT/USDC"].map(p => (
+                                <Button key={p} variant="outline" onClick={() => setPools(prev => prev.includes(p) ? prev.length > 1 ? prev.filter(x => x !== p) : prev : [...prev, p])} className={selectBtn(pools.includes(p))}>{p}</Button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[13px] font-medium text-white/60">Rebalance Threshold</label>
+                            <div className="flex gap-2">
+                              {["1","5","10","20"].map(t => <Button key={t} variant="outline" onClick={() => setThreshold(t)} className={selectBtn(threshold === t)}>{t}%</Button>)}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[13px] font-medium text-white/60">Rebalance Interval</label>
+                            <div className="flex gap-2 flex-wrap">
+                              {BUILDER_INTERVAL_OPTIONS.map(i => (
+                                <Button key={i} variant="outline" onClick={() => setIntervalVal(i)} className={selectBtn(interval === i)}>{i}</Button>
+                              ))}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                      {strategy === "YIELD" && (
+                        <motion.div key="yield" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-[13px] font-medium text-white/60">Target Protocol</label>
+                            <div className="flex gap-2">
+                              {["InitiaLend","LiquidSwap","Minitia"].map(p => <Button key={p} variant="outline" onClick={() => setProtocol(p)} className={selectBtn(protocol === p)}>{p}</Button>)}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[13px] font-medium text-white/60">Risk Profile</label>
+                            <div className="flex gap-2">
+                              {["Low","Medium","High"].map(r => <Button key={r} variant="outline" onClick={() => setRiskLevel(r)} className={selectBtn(riskLevel === r)}>{r}</Button>)}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[13px] font-medium text-white/60">Scan Interval</label>
+                            <div className="flex gap-2 flex-wrap">
+                              {BUILDER_INTERVAL_OPTIONS.map(i => (
+                                <Button key={i} variant="outline" onClick={() => setIntervalVal(i)} className={selectBtn(interval === i)}>{i}</Button>
+                              ))}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                      {strategy === "VIP" && (
+                        <motion.div key="vip" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-[13px] font-medium text-white/60">Target Vault</label>
+                            <div className="flex gap-2">
+                              {["Main Vault","Alpha Vault","Beta Vault"].map(v => <Button key={v} variant="outline" onClick={() => setVault(v)} className={selectBtn(vault === v)}>{v}</Button>)}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[13px] font-medium text-white/60">Claim Frequency</label>
+                            <div className="flex gap-2">
+                              {["Daily","Weekly","Bi-Weekly"].map(f => <Button key={f} variant="outline" onClick={() => setFrequency(f)} className={selectBtn(frequency === f)}>{f}</Button>)}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-[13px] font-medium text-white/60">Check Interval</label>
+                            <div className="flex gap-2 flex-wrap">
+                              {BUILDER_INTERVAL_OPTIONS.map(i => (
+                                <Button key={i} variant="outline" onClick={() => setIntervalVal(i)} className={selectBtn(interval === i)}>{i}</Button>
+                              ))}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Initial Capital */}
+                    <div className="space-y-1.5 mt-auto pt-3 border-t border-white/[0.06]">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[13px] font-medium text-white/60">Initial Capital (INIT)</label>
+                        <span className="text-[10px] text-white/30">Mock Balance: {formattedInit}</span>
                       </div>
-                      <div className="text-xs text-zinc-600 leading-relaxed">{s.desc}</div>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Input type="number" placeholder="e.g. 5" value={initialCapital} onChange={e => setInitialCapital(e.target.value)}
+                            className="pl-9 bg-white/[0.05] border-white/[0.1] text-white [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                          <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/30" />
+                        </div>
+                        <Button variant="outline" className="shrink-0 border-white/[0.1] text-white/50 hover:text-white text-[12px]"
+                          onClick={() => setInitialCapital((initBalance * 0.99).toFixed(6))}>Max</Button>
+                      </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
 
-          {/* Step 2: Parameters */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2, ease: [0.36, 0.2, 0.07, 1] }}
-          >
-            <Card className="bg-white/[0.02] border-white/[0.04]">
-              <CardHeader>
-                <CardTitle className="text-zinc-200 text-base font-medium">2. Configure Parameters</CardTitle>
-                <CardDescription>Set the rules for your {strategy} strategy.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 overflow-hidden">
+                {/* Right column: AI Skills + Analysis (spans both rows) */}
                 <AnimatePresence mode="wait">
-                  {strategy === "DCA" && (
-                    <motion.div key="dca" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.3 }} className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-sm font-medium text-zinc-400">Trading Pair</label>
-                          <span className="text-[10px] text-zinc-600">Optimized single-pair execution</span>
-                        </div>
-                        <div className="flex gap-2 flex-wrap">
-                          <Button
-                            variant="outline"
-                            onClick={() => setTargetTokens(["USDC"])}
-                            className={selectBtn(true)}
-                          >
-                            INIT/USDC
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-400">Interval</label>
-                        <div className="flex gap-2 flex-wrap">
-                          {["15 Minutes", "30 Minutes", "1 Hour", "4 Hours", "12 Hours", "24 Hours"].map((i) => (
-                            <Button key={i} variant="outline" onClick={() => setIntervalVal(i)} className={selectBtn(interval === i)}>{i}</Button>
-                          ))}
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {strategy === "LP" && (
-                    <motion.div key="lp" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.3 }} className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-sm font-medium text-zinc-400">Target Pools</label>
-                          <span className="text-[10px] text-zinc-600">{pools.length} selected · LP spread across all</span>
-                        </div>
-                        <div className="flex gap-2 flex-wrap">
-                          {["INIT/USDC"].map((p) => (
-                            <Button key={p} variant="outline" onClick={() => {
-                              setPools(prev =>
-                                prev.includes(p)
-                                  ? prev.length > 1 ? prev.filter(x => x !== p) : prev
-                                  : [...prev, p]
-                              );
-                            }} className={selectBtn(pools.includes(p))}>{p}</Button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-400">Rebalance Threshold (%)</label>
-                        <div className="flex gap-2">
-                          {["1", "5", "10", "20"].map((t) => (
-                            <Button key={t} variant="outline" onClick={() => setThreshold(t)} className={selectBtn(threshold === t)}>{t}%</Button>
-                          ))}
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {strategy === "YIELD" && (
-                    <motion.div key="yield" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.3 }} className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-400">Target Protocol</label>
-                        <div className="flex gap-2">
-                          {["InitiaLend", "LiquidSwap", "Minitia"].map((p) => (
-                            <Button key={p} variant="outline" onClick={() => setProtocol(p)} className={selectBtn(protocol === p)}>{p}</Button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-400">Risk Profile</label>
-                        <div className="flex gap-2">
-                          {["Low", "Medium", "High"].map((r) => (
-                            <Button key={r} variant="outline" onClick={() => setRiskLevel(r)} className={selectBtn(riskLevel === r)}>{r}</Button>
-                          ))}
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {strategy === "VIP" && (
-                    <motion.div key="vip" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.3 }} className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-400">Target Vault</label>
-                        <div className="flex gap-2">
-                          {["Main Vault", "Alpha Vault", "Beta Vault"].map((v) => (
-                            <Button key={v} variant="outline" onClick={() => setVault(v)} className={selectBtn(vault === v)}>{v}</Button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-400">Claim Frequency</label>
-                        <div className="flex gap-2">
-                          {["Daily", "Weekly", "Bi-Weekly"].map((f) => (
-                            <Button key={f} variant="outline" onClick={() => setFrequency(f)} className={selectBtn(frequency === f)}>{f}</Button>
-                          ))}
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <div className="pt-4 border-t border-white/[0.04]">
-                  <Button variant="outline" className="w-full" onClick={handleSimulate} disabled={isSimulating}>
-                    {isSimulating ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin text-emerald-400" />
-                    ) : (
-                      <LineChart className="mr-2 h-4 w-4 text-emerald-400" />
-                    )}
-                    {isSimulating ? "AI Analyzing Market..." : "Run AI Simulation"}
-                  </Button>
-
-                  <AnimatePresence>
-                    {showSimulation && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                        animate={{ opacity: 1, height: 200, marginTop: 16 }}
-                        exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                        className="rounded-[18px] border border-white/[0.04] bg-white/[0.02] p-4 overflow-hidden"
-                      >
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="text-xs text-zinc-500">Estimated ROI</span>
-                          <span className="text-xs font-medium text-emerald-400">+25.00%</span>
-                        </div>
-                        <div className="h-[140px] w-full mt-2">
-                          {showSimulation && (
-                            <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-                              <RechartsLineChart data={simulationData}>
-                                <XAxis dataKey="day" hide />
-                                <YAxis hide domain={["dataMin - 50", "dataMax + 50"]} />
-                                <Tooltip
-                                  contentStyle={{ backgroundColor: "#111113", borderColor: "rgba(255,255,255,0.06)", borderRadius: "14px", fontSize: "11px" }}
-                                  itemStyle={{ color: "#34d399" }}
-                                  labelStyle={{ color: "#71717a" }}
-                                />
-                                <Line type="monotone" dataKey="value" stroke="#34d399" strokeWidth={1.5} dot={false} animationDuration={1500} />
-                              </RechartsLineChart>
-                            </ResponsiveContainer>
+                  <motion.div key={strategy} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.3 }} className="flex flex-col gap-3 lg:col-start-3 lg:row-start-1 lg:row-span-2 lg:h-full">
+                    <div className="flex items-center justify-between shrink-0">
+                      <p className="text-white/40 text-[11px] font-semibold uppercase tracking-wider" style={{ fontFamily: "var(--font-manrope)" }}>AI Skills & Analysis</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(123,57,252,0.15)", border: "1px solid rgba(123,57,252,0.25)", color: "#a78bfa", fontFamily: "var(--font-cabin)" }}>
+                          {STRATEGY_SKILLS[strategy]?.skills.length ?? 0} modules
+                        </span>
+                        <div className="relative">
+                          <button ref={analysisModelBtnRef}
+                            onClick={() => {
+                              if (!analysisModelMenuOpen && analysisModelBtnRef.current) {
+                                const r = analysisModelBtnRef.current.getBoundingClientRect();
+                                setAnalysisMenuPos({ top: r.bottom + 8, right: window.innerWidth - r.right });
+                              }
+                              setAnalysisModelMenuOpen(v => !v);
+                            }}
+                            className="flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-[10px] font-medium text-white/40 hover:text-white/70 transition-all"
+                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                            <Sparkles className="h-2.5 w-2.5" style={{ color: "#7b39fc" }} />
+                            <span style={{ color: getModelMeta(analysisModel).color }}>{getModelMeta(analysisModel).label}</span>
+                          </button>
+                          {analysisModelMenuOpen && typeof document !== "undefined" && createPortal(
+                            <>
+                              <div className="fixed inset-0 z-40" onClick={() => setAnalysisModelMenuOpen(false)} />
+                              <div className="fixed z-50 w-[220px] rounded-[14px] overflow-hidden shadow-2xl"
+                                style={{ top: analysisMenuPos.top, right: analysisMenuPos.right, background: "rgba(10,6,24,0.95)", backdropFilter: "blur(40px)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                                {AI_ANALYSIS_MODELS.map(m => {
+                                  const meta = getModelMeta(m.id);
+                                  const isSelected = analysisModel === m.id;
+                                  const warn = m.id !== "claude-cli" && (m.provider === "anthropic" ? !apiKeyStatus.anthropic : !apiKeyStatus.gemini);
+                                  return (
+                                    <button key={m.id} disabled={warn}
+                                      onClick={() => { if (!warn) { setAnalysisModel(m.id); setAnalysisModelMenuOpen(false); } }}
+                                      className={`w-full flex items-center justify-between px-3 py-2.5 text-[11px] transition-all ${warn ? "opacity-30 cursor-not-allowed" : isSelected ? "bg-white/[0.06]" : "hover:bg-white/[0.04] cursor-pointer"}`}>
+                                      <span className="font-semibold" style={{ color: isSelected ? meta.color : warn ? "#52525b" : meta.color + "CC" }}>{meta.label}</span>
+                                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)" }}>{m.badge}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </>,
+                            document.body
                           )}
                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* AI Analysis */}
-                  <AnimatePresence>
-                    {aiAnalysis && showSimulation && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                        animate={{ opacity: 1, height: "auto", marginTop: 16 }}
-                        exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                        className="rounded-[20px] border border-white/[0.05] bg-white/[0.02] p-5 overflow-hidden"
-                      >
-                        <div className="flex items-center gap-2.5 mb-4">
-                          <div className="h-7 w-7 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                            <Brain className="h-3.5 w-3.5 text-emerald-400" />
+                      </div>
+                    </div>
+                    <div className="rounded-[18px] p-4 flex flex-col gap-3 lg:flex-1" style={{ background: "rgba(255,255,255,0.04)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <div className="flex items-center gap-2.5">
+                        <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${STRATEGY_SKILLS[strategy]?.bgColor ?? "bg-zinc-500/10"}`}>
+                          <Brain className={`h-4 w-4 ${STRATEGY_SKILLS[strategy]?.iconColor ?? "text-zinc-400"}`} />
+                        </div>
+                        <div>
+                          <p className="text-[12px] font-semibold text-white/90">{STRATEGY_SKILLS[strategy]?.label}</p>
+                          <p className="text-[10px] text-white/40">{STRATEGY_SKILLS[strategy]?.tagline}</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(STRATEGY_SKILLS[strategy]?.skills ?? []).map(skill => (
+                          <div key={skill} className="flex items-center gap-2 rounded-[10px] px-3 py-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                            <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${STRATEGY_SKILLS[strategy]?.dotColor ?? "bg-zinc-400/60"}`} />
+                            <span className="text-[11px] text-white/60">{skill}</span>
                           </div>
-                          <div>
-                            <span className="text-xs font-medium text-zinc-300">Gemini AI Analysis</span>
-                            <div className="flex items-center gap-1">
-                              <Sparkles className="h-2.5 w-2.5 text-emerald-500/50" />
-                              <span className="text-[10px] text-zinc-600">Real-time market intelligence</span>
+                        ))}
+                      </div>
+                      <div className="border-t border-white/[0.06] pt-3 flex flex-col gap-2.5">
+                        <button onClick={handleSimulate} disabled={isSimulating}
+                          className="w-full h-9 rounded-[10px] flex items-center justify-center gap-2 text-[12px] font-medium text-white transition-all hover:opacity-90 disabled:opacity-60"
+                          style={{ background: isSimulating ? "rgba(123,57,252,0.3)" : "#7b39fc", fontFamily: "var(--font-cabin)" }}>
+                          {isSimulating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LineChart className="h-3.5 w-3.5" />}
+                          {isSimulating ? "AI Analyzing..." : "Run AI Analysis"}
+                        </button>
+                        <AnimatePresence>
+                          {showSimulation && (
+                            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden space-y-2">
+                              <div className="rounded-[12px] p-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                                <div className="mb-2 flex items-center justify-between">
+                                  <span className="text-[10px] text-white/40">Est. ROI — 30d</span>
+                                  <span className="text-[11px] font-medium" style={{ color: "#a78bfa" }}>+{(((proj[6] ?? 1.25) - 1) * 100).toFixed(2)}%</span>
+                                </div>
+                                <div className="h-[70px]">
+                                  <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                                    <RechartsLineChart data={simulationData}>
+                                      <XAxis dataKey="day" hide />
+                                      <YAxis hide domain={["dataMin - 50", "dataMax + 50"]} />
+                                      <Tooltip contentStyle={{ backgroundColor: "#0a0612", borderColor: "rgba(123,57,252,0.3)", borderRadius: "10px", fontSize: "11px" }} />
+                                      <Line type="monotone" dataKey="value" stroke="#7b39fc" strokeWidth={2} dot={false} animationDuration={1200} />
+                                    </RechartsLineChart>
+                                  </ResponsiveContainer>
+                                </div>
+                              </div>
+                              {aiAnalysis && (
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-[12px] p-3 space-y-2" style={{ background: "rgba(123,57,252,0.08)", border: "1px solid rgba(123,57,252,0.2)" }}>
+                                  <div className="flex items-center gap-1.5">
+                                    <Brain className="h-3 w-3" style={{ color: "#a78bfa" }} />
+                                    <span className="text-[10px] font-medium" style={{ color: getModelMeta(analysisModel).color }}>{getModelMeta(analysisModel).label}</span>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-1.5">
+                                    {[
+                                      { label: "Signal", value: aiAnalysis.signal, color: aiAnalysis.signal === "BUY" ? "#a78bfa" : aiAnalysis.signal === "SELL" ? "#f87171" : "rgba(255,255,255,0.5)" },
+                                      { label: "Conf.", value: `${aiAnalysis.confidence}%`, color: "rgba(255,255,255,0.8)" },
+                                      { label: "Risk", value: aiAnalysis.riskLevel, color: aiAnalysis.riskLevel === "Low" ? "#a78bfa" : aiAnalysis.riskLevel === "High" ? "#f87171" : "#fbbf24" },
+                                    ].map(item => (
+                                      <div key={item.label} className="rounded-[8px] p-2" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                                        <span className="text-[9px] text-white/30 uppercase tracking-wider block mb-0.5">{item.label}</span>
+                                        <span className="text-[12px] font-semibold" style={{ color: item.color }}>{item.value}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  <p className="text-[10px] text-white/40 leading-relaxed">{aiAnalysis.reasoning}</p>
+                                </motion.div>
+                              )}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                        {!showSimulation && !isSimulating && (
+                          <div className="flex items-center justify-center py-3 text-center">
+                            <div>
+                              <Activity className="h-5 w-5 mx-auto mb-1.5 text-white/10" />
+                              <p className="text-[10px] text-white/25">Run analysis to preview</p>
                             </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-2.5 mb-4">
-                          {[
-                            { label: "Signal", value: aiAnalysis.signal, color: aiAnalysis.signal === "BUY" ? "text-emerald-400" : aiAnalysis.signal === "SELL" ? "text-red-400" : "text-zinc-400" },
-                            { label: "Confidence", value: `${aiAnalysis.confidence}%`, color: "text-zinc-200" },
-                            { label: "Risk", value: aiAnalysis.riskLevel, color: aiAnalysis.riskLevel === "Low" ? "text-emerald-400" : aiAnalysis.riskLevel === "High" ? "text-red-400" : "text-amber-400" },
-                          ].map((item) => (
-                            <div key={item.label} className="rounded-[14px] bg-white/[0.02] p-3 border border-white/[0.03]">
-                              <span className="text-[10px] text-zinc-600 uppercase tracking-wider block mb-1">{item.label}</span>
-                              <span className={`text-base font-medium ${item.color}`}>{item.value}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="rounded-[14px] bg-white/[0.02] p-3 border border-white/[0.03]">
-                          <span className="text-[10px] text-zinc-600 uppercase tracking-wider block mb-2">AI Reasoning</span>
-                          <p className="text-xs text-zinc-400 leading-relaxed">{aiAnalysis.reasoning}</p>
-                        </div>
-
-                        {aiAnalysis.suggestedAction && (
-                          <div className="mt-3 rounded-[14px] bg-emerald-500/[0.04] p-3 border border-emerald-500/10">
-                            <span className="text-[10px] text-emerald-500/60 uppercase tracking-wider block mb-1">Suggested Action</span>
-                            <p className="text-xs text-zinc-300">{aiAnalysis.suggestedAction}</p>
                           </div>
                         )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Step 3: Risk & Execution */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.25, ease: [0.36, 0.2, 0.07, 1] }}
-          >
-            <Card className="bg-white/[0.02] border-white/[0.04]">
-              <CardHeader>
-                <CardTitle className="text-zinc-200 text-base font-medium">3. Risk &amp; Execution</CardTitle>
-                <CardDescription>Control how aggressively your agent trades and when it protects your capital.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                {/* Take-Profit */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium text-zinc-400">Take-Profit</label>
-                    <span className="text-xs text-emerald-400 font-mono">{takeProfitPct}% of capital</span>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    {["10", "20", "30", "50"].map((v) => (
-                      <Button key={v} variant="outline" onClick={() => setTakeProfitPct(v)} className={selectBtn(takeProfitPct === v)}>{v}%</Button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-zinc-600">Auto-sell back to INIT when quote balance exceeds this % of your initial capital value.</p>
-                </div>
-
-                {/* Stop-Loss */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium text-zinc-400">Stop-Loss</label>
-                    <span className="text-xs text-red-400 font-mono">-{stopLossPct}% from initial</span>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    {["5", "10", "15", "20"].map((v) => (
-                      <Button key={v} variant="outline" onClick={() => setStopLossPct(v)} className={selectBtn(stopLossPct === v)}>-{v}%</Button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-zinc-600">Force-sell all positions if portfolio drops this % from initial capital. Prevents runaway losses.</p>
-                </div>
-
-                {/* Min Confidence */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium text-zinc-400">Min AI Confidence</label>
-                    <span className="text-xs text-zinc-400 font-mono">&ge;{minConfidence}%</span>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    {["30", "50", "70", "85"].map((v) => (
-                      <Button key={v} variant="outline" onClick={() => setMinConfidence(v)} className={selectBtn(minConfidence === v)}>{v}%</Button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-zinc-600">Only execute trades when AI confidence is at or above this threshold. Higher = fewer but safer trades.</p>
-                </div>
-
-                {/* Trade Size */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium text-zinc-400">Trade Size per Signal</label>
-                    <span className="text-xs text-zinc-400 font-mono">{tradeSizePct}% per trade</span>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    {["5", "10", "20", "33"].map((v) => (
-                      <Button key={v} variant="outline" onClick={() => setTradeSizePct(v)} className={selectBtn(tradeSizePct === v)}>{v}%</Button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-zinc-600">Percentage of available balance used per trade. Lower = more trades, more compounding. Higher = fewer, bigger bets.</p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Step 4: Agent Details */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3, ease: [0.36, 0.2, 0.07, 1] }}
-          >
-            <Card className="bg-white/[0.02] border-white/[0.04]">
-              <CardHeader>
-                <CardTitle className="text-zinc-200 text-base font-medium">4. Agent Details</CardTitle>
-                <CardDescription>How your agent appears in the marketplace.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-zinc-400">Initial Capital (INIT)</label>
-                  <div className="relative flex gap-2">
-                    <div className="relative flex-1">
-                      <Input
-                        type="number"
-                        placeholder="e.g. 5"
-                        className="pl-10 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                        value={initialCapital}
-                        onChange={(e) => setInitialCapital(e.target.value)}
-                      />
-                      <Wallet className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-700" />
+                      </div>
                     </div>
-                    <Button
-                      variant="outline"
-                      className="shrink-0"
-                      onClick={() => {
-                        if (balance) {
-                          const max = Number(balance.formatted) * 0.99;
-                          setInitialCapital(max.toFixed(6));
-                        }
-                      }}
-                    >
-                      Max
-                    </Button>
-                  </div>
-                  {balance && (
-                    <p className="text-xs text-zinc-600">
-                      Balance: {Number(balance.formatted).toFixed(2)} {balance.symbol}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-zinc-400">Agent Name</label>
-                  <Input value={agentName} onChange={(e) => setAgentName(e.target.value)} placeholder="e.g., INIT Accumulator Pro" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-zinc-400">Description</label>
-                  <Input value={agentDesc} onChange={(e) => setAgentDesc(e.target.value)} placeholder="Describe your strategy to attract subscribers..." />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
+                  </motion.div>
+                </AnimatePresence>
 
-        {/* Deployment Summary */}
-        <motion.div
-          className="space-y-5 sticky top-4 self-start"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4, ease: [0.36, 0.2, 0.07, 1] }}
-        >
-          <Card className="bg-white/[0.02] border-white/[0.04]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-zinc-200 text-base font-medium">
-                <Bot className="h-4 w-4 text-emerald-400" />
-                Deployment Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              {[
-                { label: "Strategy", value: strategy },
-                ...(strategy === "DCA" ? [{ label: "Pair", value: "INIT/USDC" }, { label: "Interval", value: interval }] : []),
-                ...(strategy === "LP" ? [{ label: "Pools", value: pools.join(", ") }, { label: "Threshold", value: `${threshold}%` }] : []),
-                ...(strategy === "YIELD" ? [{ label: "Protocol", value: protocol }, { label: "Risk", value: riskLevel }] : []),
-                ...(strategy === "VIP" ? [{ label: "Vault", value: vault }, { label: "Frequency", value: frequency }] : []),
-                { label: "Network", value: "Initia Mainnet" },
-                { label: "Take-Profit", value: `${takeProfitPct}% of capital` },
-                { label: "Stop-Loss", value: `-${stopLossPct}% from initial` },
-                { label: "Min Confidence", value: `≥${minConfidence}%` },
-                { label: "Trade Size", value: `${tradeSizePct}% per signal` },
-                { label: "Creator Fee", value: "20% of Profit", accent: true },
-                { label: "Est. Gas", value: "~0.001 INIT", mono: true },
-              ].map((item: any) => (
-                <div key={item.label} className="flex justify-between border-b border-white/[0.03] pb-2.5 gap-4">
-                  <span className="text-zinc-500 shrink-0">{item.label}</span>
-                  <span className={`font-medium truncate ${item.accent ? "text-emerald-400" : item.mono ? "font-mono text-zinc-300" : "text-zinc-200"}`}>
-                    {item.value}
-                  </span>
-                </div>
-              ))}
-
-              <div className="flex gap-2 pt-2">
-                <Badge variant="outline" className="text-[10px]">Move-Interwoven</Badge>
-                <Badge className="text-[10px]">evm-1 Testnet</Badge>
               </div>
+            </motion.div>
+          )}
 
-              <div className="rounded-[18px] bg-emerald-500/[0.04] border border-emerald-500/10 mt-3 overflow-hidden">
-                <div className="px-4 pt-3 pb-1">
-                  <div className="flex items-center gap-1.5 text-[10px] text-emerald-500/60 uppercase tracking-wider font-medium">
-                    <Wallet className="h-3 w-3" />
-                    Deployment Capital
+          {/* STEP 2: Risk + Deploy */}
+          {wizardStep === 2 && (
+            <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3, ease: [0.36, 0.2, 0.07, 1] }}
+              className="absolute inset-0 overflow-y-auto scrollbar-hide px-5 md:px-8 py-5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:h-full pb-4">
+
+                {/* Left: Risk Controls */}
+                <div className="flex flex-col gap-3 lg:h-full">
+                  <p className="text-white/40 text-[11px] font-semibold uppercase tracking-wider shrink-0" style={{ fontFamily: "var(--font-manrope)" }}>Risk & Execution Controls</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:flex-1 lg:grid-rows-2">
+                    {[
+                      { key: "tp", label: "Take-Profit",       desc: "Auto-sell when quote exceeds % of capital",   value: takeProfitPct, suffix: "%",  set: setTakeProfitPct, options: ["10","20","30","50"],  valueColor: "#a78bfa",               hint: "Auto-sell back to INIT when quote balance exceeds this % of initial capital." },
+                      { key: "sl", label: "Stop-Loss",         desc: "Force-exit if portfolio drops this much",     value: stopLossPct,   suffix: "%",  set: setStopLossPct,   options: ["5","10","15","20"],   valueColor: "#f87171",  prefix: "-", hint: "Force-sell all positions if portfolio drops this % from initial capital." },
+                      { key: "mc", label: "Min AI Confidence", desc: "Only execute above this confidence level",    value: minConfidence, suffix: "%",  set: setMinConfidence, options: ["30","50","70","85"],  valueColor: "rgba(255,255,255,0.7)", prefix: "≥", hint: "Higher = fewer but more confident trades." },
+                      { key: "ts", label: "Trade Size/Signal", desc: "% of available balance used per trade",      value: tradeSizePct,  suffix: "%",  set: setTradeSizePct,  options: ["5","10","20","30"],   valueColor: "rgba(255,255,255,0.7)", hint: "Capped at 30% per vault policy (docs). Higher = fewer, larger bets." },
+                    ].map(ctrl => (
+                      <div key={ctrl.key} className="rounded-[18px] p-4 flex flex-col gap-3 h-full" style={{ background: "rgba(255,255,255,0.04)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-[13px] font-semibold text-white/80" style={{ fontFamily: "var(--font-manrope)" }}>{ctrl.label}</p>
+                            <p className="text-[11px] text-white/30 mt-0.5">{ctrl.desc}</p>
+                          </div>
+                          <span className="text-[15px] font-bold font-mono shrink-0 ml-2" style={{ color: ctrl.valueColor }}>{ctrl.prefix ?? ""}{ctrl.value}{ctrl.suffix}</span>
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                          {ctrl.options.map(v => (
+                            <button key={v} onClick={() => ctrl.set(v)}
+                              className="px-3 py-1.5 rounded-[8px] text-[12px] font-medium transition-all"
+                              style={{ background: ctrl.value === v ? "#7b39fc" : "rgba(255,255,255,0.05)", border: `1px solid ${ctrl.value === v ? "#7b39fc" : "rgba(255,255,255,0.08)"}`, color: ctrl.value === v ? "white" : "rgba(255,255,255,0.4)", fontFamily: "var(--font-cabin)" }}>
+                              {ctrl.prefix ?? ""}{v}{ctrl.suffix}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-white/20 leading-relaxed mt-auto">{ctrl.hint}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="px-4 pb-3">
-                  <div className="text-2xl font-light text-emerald-400 font-mono tracking-tight">
-                    {initialCapital || "0"} <span className="text-sm text-emerald-500/60">INIT</span>
+
+                {/* Right: Agent Identity + Deployment Summary */}
+                <div className="flex flex-col gap-3 lg:h-full">
+                  <p className="text-white/40 text-[11px] font-semibold uppercase tracking-wider shrink-0" style={{ fontFamily: "var(--font-manrope)" }}>Agent Identity & Deploy</p>
+                  <div className="flex flex-col gap-3 lg:flex-1">
+                    <div className="rounded-[18px] p-5 flex flex-col gap-4" style={{ background: "rgba(255,255,255,0.04)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <div className="space-y-1.5">
+                        <label className="text-[12px] font-medium text-white/50" style={{ fontFamily: "var(--font-manrope)" }}>Agent Name</label>
+                        <Input value={agentName} onChange={e => setAgentName(e.target.value)} placeholder="e.g., INIT Accumulator Pro" className="bg-white/[0.05] border-white/[0.1] text-white" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[12px] font-medium text-white/50" style={{ fontFamily: "var(--font-manrope)" }}>Description</label>
+                        <Input value={agentDesc} onChange={e => setAgentDesc(e.target.value)} placeholder="Describe your strategy..." className="bg-white/[0.05] border-white/[0.1] text-white" />
+                      </div>
+                      <div className="rounded-[12px] p-3" style={{ background: "rgba(123,57,252,0.08)", border: "1px solid rgba(123,57,252,0.18)" }}>
+                        <p className="text-[11px] text-white/40 leading-relaxed">
+                          Your agent appears in the marketplace. You earn <span style={{ color: "#a78bfa" }}>18% of subscriber profits</span> as creator fee.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="rounded-[18px] p-5 flex flex-col gap-2.5 lg:flex-1" style={{ background: "rgba(123,57,252,0.1)", backdropFilter: "blur(20px)", border: "1px solid rgba(123,57,252,0.25)" }}>
+                      <div className="flex items-center gap-3 mb-1">
+                        <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "rgba(123,57,252,0.25)", border: "1px solid rgba(123,57,252,0.4)" }}>
+                          <Bot className="h-4 w-4" style={{ color: "#a78bfa" }} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-white/90 truncate">{agentName || "Unnamed Agent"}</p>
+                          <p className="text-[11px] text-white/40">{strategy} · evm-1 Testnet</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        {([
+                          { label: "Strategy", value: strategy },
+                          { label: "Take-Profit", value: `${takeProfitPct}%` },
+                          { label: "Stop-Loss", value: `-${stopLossPct}%` },
+                          { label: "Min Confidence", value: `≥${minConfidence}%` },
+                          { label: "Trade Size", value: `${tradeSizePct}% / signal` },
+                          { label: "Creator Fee", value: "18% of Profit", accent: true },
+                        ] as Array<{ label: string; value: string; accent?: boolean }>).map((item) => (
+                          <div key={item.label} className="flex justify-between items-center pb-1.5 border-b border-white/[0.06] gap-4">
+                            <span className="text-[11px] text-white/40">{item.label}</span>
+                            <span className={`text-[11px] font-medium ${item.accent ? "" : "text-white/70"}`} style={item.accent ? { color: "#a78bfa" } : {}}>{item.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="rounded-[14px] p-4 mt-auto" style={{ background: "rgba(123,57,252,0.15)", border: "1px solid rgba(123,57,252,0.3)" }}>
+                        <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1" style={{ fontFamily: "var(--font-manrope)" }}>Capital to Deploy</p>
+                        <p className="text-[24px] font-light font-mono" style={{ color: "#a78bfa" }}>{initialCapital || "0"} <span className="text-[14px] text-white/40">INIT</span></p>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-zinc-600 mt-1">
-                    Transferred to AgentVault on deploy
-                  </p>
                 </div>
+
               </div>
-            </CardContent>
-            <CardFooter>
-              <Button className="w-full rounded-[16px]" size="lg" onClick={handleDeploy} disabled={deploymentStatus !== "idle"}>
-                <Play className="mr-2 h-4 w-4" /> Deploy Agent
-              </Button>
-            </CardFooter>
-          </Card>
-        </motion.div>
+            </motion.div>
+          )}
+
+        </AnimatePresence>
       </div>
 
-      {/* Deployment Modal */}
-      {mounted &&
-        createPortal(
-          <AnimatePresence>
-            {deploymentStatus !== "idle" && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
-              >
-                <motion.div
-                  initial={{ scale: 0.95, opacity: 0, y: 15 }}
-                  animate={{ scale: 1, opacity: 1, y: 0 }}
-                  transition={{ duration: 0.4, ease: [0.36, 0.2, 0.07, 1] }}
-                  className="max-w-md w-full gradient-border glow-emerald p-0 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] overflow-hidden relative"
-                >
-                  <div className="text-center relative rounded-[27px] bg-[#111113] p-8">
-                    {deploymentStatus !== "success" ? (
-                      <>
-                        <div className="mb-6 flex justify-center">
-                          <div className="relative">
-                            <Loader2 className="h-14 w-14 text-emerald-500/60 animate-spin" />
-                            <Bot className="h-5 w-5 text-emerald-400 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                          </div>
-                        </div>
-                        <h2 className="text-xl font-medium text-zinc-200 mb-2">Deploying Agent</h2>
-                        <p className="text-zinc-500 text-sm mb-8">Implementing your logic on the Initia Rollup...</p>
-
-                        <div className="space-y-4 max-w-xs mx-auto text-left">
-                          {[
-                            { id: "preparing", label: "Preparing AgentVault Contract" },
-                            { id: "funding", label: `Transferring ${initialCapital} INIT to Vault` },
-                            { id: "signing", label: "Requesting Transaction Signature" },
-                            { id: "broadcasting", label: "Broadcasting to evm-1 Network" },
-                          ].map((step, idx) => {
-                            const isCurrent = deploymentStatus === step.id || (step.id === "funding" && deploymentStatus === "preparing");
-                            const isDone = ["preparing", "funding", "signing", "broadcasting", "success"].indexOf(deploymentStatus) > idx;
-
-                            return (
-                              <div key={step.id} className="flex items-center gap-3">
-                                <div className={`h-6 w-6 rounded-full flex items-center justify-center border transition-colors duration-300 ${
-                                  isDone ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" :
-                                  isCurrent ? "border-emerald-500/30 animate-pulse" : "border-white/[0.06] text-zinc-700"
-                                }`}>
-                                  {isDone ? <CheckCircle2 className="h-4 w-4" /> : <span className="text-[10px] font-medium">{idx + 1}</span>}
-                                </div>
-                                <span className={`text-sm ${isCurrent ? "text-emerald-400" : isDone ? "text-zinc-400" : "text-zinc-700"}`}>
-                                  {step.label}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </>
-                    ) : (
-                      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="py-4">
-                        <div className="mb-6 flex justify-center">
-                          <div className="h-16 w-16 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/20">
-                            <CheckCircle2 className="h-8 w-8 text-emerald-400" />
-                          </div>
-                        </div>
-                        <h2 className="text-2xl font-medium text-zinc-200 mb-2">Agent Deployed!</h2>
-                        <p className="text-emerald-400/70 mb-6">Successfully launched on Initia</p>
-
-                        <div className="bg-white/[0.02] rounded-[20px] p-4 border border-white/[0.04] mb-8 text-left">
-                          <div className="text-[10px] font-medium uppercase text-zinc-600 mb-2 tracking-wider">Transaction Hash</div>
-                          <div className="flex items-center justify-between gap-2 overflow-hidden">
-                            <code className="text-xs text-zinc-400 truncate font-mono">{txHash}</code>
-                            <Button variant="ghost" size="icon-xs" onClick={() => window.open(`https://scan.testnet.initia.xyz/initiation-2/transactions/${txHash}`, "_blank")}>
-                              <ExternalLink className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-2.5">
-                          <Button className="w-full rounded-[16px]" onClick={() => router.push("/app/dashboard")}>
-                            Go to Dashboard <ChevronRight className="ml-2 h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" className="text-zinc-500 hover:text-zinc-300" onClick={() => setDeploymentStatus("idle")}>
-                            Build Another Agent
-                          </Button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>,
-          document.body,
+      {/* ── BOTTOM NAVIGATION ── */}
+      <div className="shrink-0 flex items-center justify-between px-5 md:px-8 py-4 border-t border-white/[0.06]">
+        <button
+          onClick={() => setWizardStep(s => Math.max(1, s - 1))}
+          disabled={wizardStep === 1}
+          className="flex items-center gap-2 px-5 h-10 rounded-[10px] text-[13px] font-medium text-white/60 hover:text-white disabled:opacity-30 transition-all"
+          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.09)", fontFamily: "var(--font-cabin)" }}>
+          <ChevronLeft className="h-4 w-4" /> Back
+        </button>
+        <div className="flex items-center gap-1.5">
+          {[1, 2].map(i => (
+            <div key={i} className="h-1.5 rounded-full transition-all duration-300"
+              style={{ width: wizardStep === i ? "20px" : "6px", background: wizardStep >= i ? "#7b39fc" : "rgba(255,255,255,0.1)" }} />
+          ))}
+        </div>
+        {wizardStep < 2 ? (
+          <button
+            onClick={() => setWizardStep(2)}
+            className="flex items-center gap-2 px-5 h-10 rounded-[10px] text-[13px] font-medium text-white hover:opacity-90 transition-all"
+            style={{ background: "#7b39fc", fontFamily: "var(--font-cabin)" }}>
+            Continue <ChevronRight className="h-4 w-4" />
+          </button>
+        ) : (
+          <button
+            onClick={handleDeploy}
+            disabled={deploymentStatus !== "idle" || !agentName}
+            className="flex items-center gap-2 px-5 h-10 rounded-[10px] text-[13px] font-medium text-white hover:opacity-90 disabled:opacity-50 transition-all"
+            style={{ background: "#7b39fc", fontFamily: "var(--font-cabin)" }}>
+            {deploymentStatus !== "idle" && deploymentStatus !== "success" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+            Deploy Agent
+          </button>
         )}
+      </div>
+
+      {/* ── DEPLOYMENT MODAL ── */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {deploymentStatus !== "idle" && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+              style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(12px)" }}>
+              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+                className="w-full max-w-md rounded-[24px] p-8 text-center relative"
+                style={{ background: "rgba(10,6,24,0.97)", border: "1px solid rgba(123,57,252,0.3)" }}>
+                <div className="absolute top-0 left-0 right-0 h-[2px] rounded-t-[24px]" style={{ background: "linear-gradient(90deg, transparent, #7b39fc, transparent)" }} />
+                {deploymentStatus === "approving" && (
+                  <div className="space-y-4">
+                    <div className="h-16 w-16 rounded-full mx-auto flex items-center justify-center" style={{ background: "rgba(123,57,252,0.15)", border: "1px solid rgba(123,57,252,0.3)" }}>
+                      <Loader2 className="h-8 w-8 animate-spin" style={{ color: "#7b39fc" }} />
+                    </div>
+                    <div>
+                      <h3 className="text-[20px] text-white font-semibold" style={{ fontFamily: "var(--font-heading)" }}>Approving INIT</h3>
+                      <p className="text-white/40 text-[13px] mt-1">Confirm the approval transaction in your wallet</p>
+                    </div>
+                  </div>
+                )}
+                {deploymentStatus === "deploying" && (
+                  <div className="space-y-4">
+                    <div className="h-16 w-16 rounded-full mx-auto flex items-center justify-center" style={{ background: "rgba(123,57,252,0.15)", border: "1px solid rgba(123,57,252,0.3)" }}>
+                      <Loader2 className="h-8 w-8 animate-spin" style={{ color: "#7b39fc" }} />
+                    </div>
+                    <div>
+                      <h3 className="text-[20px] text-white font-semibold" style={{ fontFamily: "var(--font-heading)" }}>Deploying Agent</h3>
+                      <p className="text-white/40 text-[13px] mt-1">Registering your agent on-chain</p>
+                    </div>
+                  </div>
+                )}
+                {(deploymentStatus === "preparing" || deploymentStatus === "funding" || deploymentStatus === "signing" || deploymentStatus === "broadcasting") && (
+                  <div className="space-y-4">
+                    <div className="h-16 w-16 rounded-full mx-auto flex items-center justify-center" style={{ background: "rgba(123,57,252,0.15)", border: "1px solid rgba(123,57,252,0.3)" }}>
+                      <Loader2 className="h-8 w-8 animate-spin" style={{ color: "#7b39fc" }} />
+                    </div>
+                    <div>
+                      <h3 className="text-[20px] text-white font-semibold" style={{ fontFamily: "var(--font-heading)" }}>Processing</h3>
+                      <p className="text-white/40 text-[13px] mt-1 capitalize">{deploymentStatus}...</p>
+                    </div>
+                  </div>
+                )}
+                {deploymentStatus === "success" && (
+                  <div className="space-y-5">
+                    <div className="h-16 w-16 rounded-full mx-auto flex items-center justify-center" style={{ background: "rgba(123,57,252,0.2)", border: "1px solid rgba(123,57,252,0.4)" }}>
+                      <CheckCircle2 className="h-8 w-8" style={{ color: "#a78bfa" }} />
+                    </div>
+                    <div>
+                      <h3 className="text-[22px] text-white font-semibold" style={{ fontFamily: "var(--font-heading)" }}>Agent Deployed!</h3>
+                      <p className="text-white/40 text-[13px] mt-1">Successfully launched on Initia</p>
+                    </div>
+                    {txHash && (
+                      <div className="rounded-[14px] p-3 text-left" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                        <p className="text-[10px] text-white/30 mb-1 uppercase tracking-wider">Transaction Hash</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <code className="text-[11px] text-white/60 truncate font-mono">{txHash}</code>
+                          <Button variant="ghost" size="icon-xs" onClick={() => window.open(explorerEvmTxUrl(txHash), "_blank")}><ExternalLink className="h-3.5 w-3.5" /></Button>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-2">
+                      <button onClick={() => router.push("/app/dashboard")}
+                        className="w-full h-11 rounded-[12px] text-white text-[14px] font-medium hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                        style={{ background: "#7b39fc", fontFamily: "var(--font-cabin)" }}>
+                        Go to Dashboard <ChevronRight className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => { setDeploymentStatus("idle"); setWizardStep(1); }}
+                        className="w-full h-10 rounded-[12px] text-white/40 text-[13px] hover:text-white/70 transition-all"
+                        style={{ fontFamily: "var(--font-cabin)" }}>
+                        Build Another Agent
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {deploymentStatus === "failed" && (
+                  <div className="space-y-5">
+                    <div className="h-16 w-16 rounded-full mx-auto flex items-center justify-center" style={{ background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.4)" }}>
+                      <span className="text-2xl text-rose-300">!</span>
+                    </div>
+                    <div>
+                      <h3 className="text-[22px] text-white font-semibold" style={{ fontFamily: "var(--font-heading)" }}>Deploy Interrupted</h3>
+                      <p className="text-white/50 text-[13px] mt-1">The deploy flow stopped before completion.</p>
+                    </div>
+                    <div className="rounded-[14px] p-3 text-left" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <p className="text-[10px] text-white/30 mb-1 uppercase tracking-wider">Reason</p>
+                      <p className="text-[12px] text-white/70 break-words">{deploymentError || "Unknown error from wallet or RPC."}</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <button onClick={() => { setDeploymentStatus("idle"); setDeploymentError(""); }}
+                        className="w-full h-11 rounded-[12px] text-white text-[14px] font-medium hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                        style={{ background: "#7b39fc", fontFamily: "var(--font-cabin)" }}>
+                        Try Again <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
     </div>
   );
 }

@@ -80,80 +80,24 @@ Wagmi hooks are used for all contract reads and writes:
 - `useWriteContract` — deposit, withdraw, approve, executeSwap
 - `useSwitchChain` — ensure user is on evm-1 before transactions
 
-## AI Model Cascade
-
-InitiaAgent routes every AI request through a multi-model waterfall. The backend (`Express.js`) tries each model in order until one succeeds.
-
-```
-1. claude-sonnet-4-6     (Anthropic)  ← primary — best reasoning
-2. gemini-2.5-flash      (Google)     ← fast fallback
-3. claude-haiku-4-5      (Anthropic)  ← fast Anthropic fallback
-4. gemini-2.5-pro        (Google)     ← deep fallback
-5. Claude CLI (stdin)                 ← last resort, no API key required
-```
-
-### Anthropic Claude
-
-**Package:** `@anthropic-ai/sdk`
-
-| Model | Role |
-|---|---|
-| `claude-sonnet-4-6` | Primary — market analysis, chat, strategy optimization |
-| `claude-haiku-4-5-20251001` | Fast Anthropic fallback |
-
-Features enabled:
-- **Adaptive thinking** — auto-enabled on Opus/Sonnet 4.6 for complex analysis
-- **Prompt caching** — `cache_control` on system block reduces latency on repeat calls
-- **SSE streaming** — real-time chat responses via `generateStream()`
-
-### Google Gemini
+## Google Gemini AI
 
 **Package:** `@google/genai`
 
-| Model | Role |
+### Models
+
+| Priority | Model | Usage |
+|---|---|---|
+| Primary | `gemini-3-flash-preview` | Market analysis and chat |
+| Fallback | `gemini-2.0-flash` | Used if primary model fails |
+| Emergency | Simulation mode | Deterministic responses if all models fail |
+
+### Endpoints
+
+| Feature | System Role |
 |---|---|
-| `gemini-2.5-flash` | First Gemini fallback |
-| `gemini-2.5-pro` | Deep analysis fallback |
-
-### Claude CLI (stdin)
-
-Last-resort fallback that pipes prompts via `stdin` to the `claude` CLI. Used when no API keys are available. Avoids the `ENAMETOOLONG` / `uv_spawn` error on Windows by never passing prompts as CLI arguments.
-
-### Agent Skills (Backend API Endpoints)
-
-| Endpoint | Description |
-|---|---|
-| `POST /api/agent/analyze` | Market analysis → BUY/SELL/HOLD signal |
-| `POST /api/agent/chat` | Conversational portfolio strategist |
-| `POST /api/agent/execute` | Simulated trade execution with real prices |
-| `POST /api/agent/lp-fee` | LP fee calculation from live CoinGecko volume |
-| `POST /api/agent/consensus` | Multi-model voting signal (all models vote, majority wins) |
-| `POST /api/agent/optimize` | Strategy optimizer (take-profit, stop-loss, position sizing) |
-| `POST /api/agent/risk` | Portfolio risk score 0–100 (concentration, smart contract, liquidity) |
-| `POST /api/agent/epoch` | Epoch performance report with recommendations |
-
-## Backend (Express.js)
-
-**Port:** `4000` | **Package:** `express` + TypeScript
-
-The backend is a standalone Express.js service that handles all AI, agent data, and analytics. The Next.js frontend proxies all `/api/*` requests to the backend via `next.config.ts` rewrites — no CORS, no duplication.
-
-```typescript
-// next.config.ts — all /api/* calls go to Express
-async rewrites() {
-  return [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }]
-}
-```
-
-## Neon PostgreSQL
-
-**Package:** `@neondatabase/serverless`
-
-Agent data is persisted in a Neon serverless PostgreSQL database. The backend gracefully degrades to in-memory state if `DATABASE_URL` is not set.
-
-```env
-DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
-```
+| Market Analysis | Trading agent specializing in DeFi strategy analysis |
+| Chat Assistant | Wealth manager and strategy optimizer with portfolio context |
 
 ## Price Feeds
 

@@ -30,7 +30,6 @@
 
 | Resource | URL |
 |---|---|
-| Anthropic Claude | [@anthropic-ai/sdk (npm)](https://www.npmjs.com/package/@anthropic-ai/sdk) |
 | Google Gemini | [@google/genai (npm)](https://www.npmjs.com/package/@google/genai) |
 | CoinGecko API | [coingecko.com/api](https://www.coingecko.com/en/api) |
 | Pyth Network | [pyth.network](https://pyth.network/) |

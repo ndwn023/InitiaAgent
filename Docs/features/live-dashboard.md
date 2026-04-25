@@ -51,7 +51,7 @@ An integrated chat interface for conversational AI support:
 - **Draggable prompt suggestions** — pre-built questions for quick interaction
 - **Context-aware** — the AI knows your agent count, capital deployed, and unrealized profit
 - **Market data** — responses incorporate live price feeds from CoinGecko/Pyth
-- **Powered by** multi-model AI cascade — Anthropic Claude Sonnet 4.6 (primary) with Google Gemini fallback
+- **Powered by** Google Gemini (with model fallback and simulation mode)
 
 Example prompts:
 - "What's the best strategy for current market conditions?"

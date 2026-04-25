@@ -1,5 +1,8 @@
 # InitiaAgent — Backend API
 
+> [!IMPORTANT]
+> **NON-COMMERCIAL HACKATHON PROJECT** — This repository is submitted exclusively for the **INITIATE Season 1 Hackathon** (Initia x DoraHacks). It is an educational and competitive submission only. No real funds are involved. Not intended for commercial use.
+
 Standalone Express.js + TypeScript REST API. Multi-model AI cascade with automatic fallback.
 
 ## AI Model Cascade
